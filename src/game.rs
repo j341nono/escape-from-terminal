@@ -256,4 +256,20 @@ mod tests {
         game.handle_command(Command::Interact);
         assert_eq!(game.state, GameState::Escaped);
     }
+
+    #[test]
+    fn sprinting_consumes_and_resting_recovers_stamina() {
+        let mut game = Game::new(11);
+        game.state = GameState::Playing;
+        let sprint = MovementInput {
+            forward: 1.0,
+            sprint: true,
+            ..MovementInput::default()
+        };
+        game.update(sprint, 0.1);
+        let spent = game.stamina;
+        assert!(spent < game.config.stamina_seconds);
+        game.update(MovementInput::default(), 0.1);
+        assert!(game.stamina > spent);
+    }
 }
