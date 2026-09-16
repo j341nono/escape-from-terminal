@@ -162,8 +162,40 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
         }
     }
     render_monster(&mut frame, game, &rays);
+    let marker = if game.power_restored { '>' } else { '!' };
+    let marker_cell = if game.power_restored {
+        game.exit_cell
+    } else {
+        game.objective_cell
+    };
+    render_marker(&mut frame, game, &rays, marker_cell.center(), marker);
     apply_proximity_glitch(&mut frame, game);
     frame
+}
+
+fn render_marker(
+    frame: &mut FrameBuffer,
+    game: &Game,
+    wall_depth: &[crate::raycaster::ViewRay],
+    position: crate::geom::Vec2,
+    glyph: char,
+) {
+    let relative = position - game.player.position;
+    let raw_angle = relative.y.atan2(relative.x) - game.player.angle;
+    let angle = (raw_angle + PI).rem_euclid(2.0 * PI) - PI;
+    if angle.abs() > game.config.fov * 0.52 {
+        return;
+    }
+    let depth = relative.length() * angle.cos();
+    let x = ((angle / game.config.fov + 0.5) * frame.width as f32) as isize;
+    if x < 0 || x >= frame.width as isize || depth >= wall_depth[x as usize].perpendicular_distance
+    {
+        return;
+    }
+    let height = ((frame.height as f32 / depth.max(1.0)) * 0.3).clamp(1.0, 6.0) as isize;
+    for y in 0..height {
+        frame.set(x as usize, frame.height / 2 - y as usize, glyph);
+    }
 }
 
 fn apply_proximity_glitch(frame: &mut FrameBuffer, game: &Game) {
