@@ -4,11 +4,13 @@ use crate::geom::{Cell, Vec2};
 pub enum Tile {
     Wall,
     Floor,
+    DoorClosed,
+    DoorOpen,
 }
 
 impl Tile {
     pub fn blocks_movement(self) -> bool {
-        matches!(self, Self::Wall)
+        matches!(self, Self::Wall | Self::DoorClosed)
     }
 
     pub fn blocks_sight(self) -> bool {
@@ -48,6 +50,8 @@ impl Map {
                 let tile = match symbol {
                     '#' => Tile::Wall,
                     '.' | ' ' => Tile::Floor,
+                    'D' => Tile::DoorClosed,
+                    'd' => Tile::DoorOpen,
                     other => return Err(format!("unsupported map symbol: {other}")),
                 };
                 map.set_tile(Cell::new(x, y), tile);
@@ -116,6 +120,16 @@ impl Map {
                 && self.is_walkable(Cell::new(point.x as usize, point.y as usize))
         })
     }
+
+    pub fn toggle_door(&mut self, cell: Cell) -> bool {
+        let next = match self.tile(cell) {
+            Tile::DoorClosed => Tile::DoorOpen,
+            Tile::DoorOpen => Tile::DoorClosed,
+            _ => return false,
+        };
+        self.set_tile(cell, next);
+        true
+    }
 }
 
 #[cfg(test)]
@@ -141,5 +155,14 @@ mod tests {
         assert!(Map::from_ascii(&["###", "#.#", "###"]).is_ok());
         assert!(Map::from_ascii(&["###", "#.", "###"]).is_err());
         assert!(Map::from_ascii(&["###", "#..", "###"]).is_err());
+    }
+
+    #[test]
+    fn doors_block_until_opened() {
+        let mut map = Map::from_ascii(&["#####", "#.D.#", "#####"]).expect("valid map");
+        let door = Cell::new(2, 1);
+        assert!(!map.is_walkable(door));
+        assert!(map.toggle_door(door));
+        assert!(map.is_walkable(door));
     }
 }
