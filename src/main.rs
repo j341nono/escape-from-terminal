@@ -1,5 +1,6 @@
 mod config;
 mod geom;
+mod input;
 mod level;
 mod map;
 mod player;
