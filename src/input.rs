@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 
 const KEY_LATCH: Duration = Duration::from_millis(140);
+const COMMAND_DEBOUNCE: Duration = Duration::from_millis(250);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
@@ -24,6 +25,7 @@ pub struct InputState {
     turn_left_until: Instant,
     turn_right_until: Instant,
     sprint_until: Instant,
+    command_until: Instant,
 }
 
 impl InputState {
@@ -36,6 +38,7 @@ impl InputState {
             turn_left_until: now,
             turn_right_until: now,
             sprint_until: now,
+            command_until: now,
         }
     }
 
@@ -50,15 +53,24 @@ impl InputState {
             KeyCode::Left => self.turn_left_until = deadline,
             KeyCode::Right => self.turn_right_until = deadline,
             KeyCode::Char(' ') => self.sprint_until = deadline,
-            KeyCode::Enter if active => return Command::Confirm,
-            KeyCode::Esc if active => return Command::TogglePause,
-            KeyCode::Char('e' | 'E') if active => return Command::Interact,
-            KeyCode::Char('r' | 'R') if active => return Command::Retry,
-            KeyCode::Char('n' | 'N') if active => return Command::NewFacility,
-            KeyCode::Char('q' | 'Q') if active => return Command::Quit,
             _ => {}
         }
-        Command::None
+        if event.kind != KeyEventKind::Press || now < self.command_until {
+            return Command::None;
+        }
+        let command = match event.code {
+            KeyCode::Enter => Command::Confirm,
+            KeyCode::Esc => Command::TogglePause,
+            KeyCode::Char('e' | 'E') => Command::Interact,
+            KeyCode::Char('r' | 'R') => Command::Retry,
+            KeyCode::Char('n' | 'N') => Command::NewFacility,
+            KeyCode::Char('q' | 'Q') => Command::Quit,
+            _ => Command::None,
+        };
+        if command != Command::None {
+            self.command_until = now + COMMAND_DEBOUNCE;
+        }
+        command
     }
 
     pub fn movement(&self, now: Instant) -> MovementInput {
@@ -143,5 +155,18 @@ mod tests {
         );
         input.clear_movement(now);
         assert_eq!(input.movement(now), MovementInput::default());
+    }
+
+    #[test]
+    fn one_shot_commands_are_debounced() {
+        let now = Instant::now();
+        let mut input = InputState::new(now);
+        let enter = KeyEvent::new(KeyCode::Enter, crossterm::event::KeyModifiers::NONE);
+        assert_eq!(input.handle_key(enter, now), Command::Confirm);
+        assert_eq!(input.handle_key(enter, now), Command::None);
+        assert_eq!(
+            input.handle_key(enter, now + COMMAND_DEBOUNCE),
+            Command::Confirm
+        );
     }
 }
