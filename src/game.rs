@@ -272,4 +272,16 @@ mod tests {
         game.update(MovementInput::default(), 0.1);
         assert!(game.stamina > spent);
     }
+
+    #[test]
+    fn capture_enters_retryable_state() {
+        let mut game = Game::new(19);
+        game.state = GameState::Playing;
+        game.monster.position = game.player.position;
+        game.update(MovementInput::default(), 0.01);
+        assert_eq!(game.state, GameState::Caught);
+        game.handle_command(Command::Retry);
+        assert_eq!(game.state, GameState::Playing);
+        assert_eq!(game.seed, 19);
+    }
 }
