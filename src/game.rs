@@ -33,6 +33,9 @@ pub struct Game {
     pub elapsed_seconds: f32,
     pub chase_count: u32,
     pub caught_flash: f32,
+    pub status_message: Option<&'static str>,
+    pub status_timer: f32,
+    interaction_noise: f32,
     rng: StdRng,
 }
 
@@ -53,6 +56,9 @@ impl Game {
             elapsed_seconds: 0.0,
             chase_count: 0,
             caught_flash: 0.0,
+            status_message: None,
+            status_timer: 0.0,
+            interaction_noise: 0.0,
             rng: StdRng::seed_from_u64(seed ^ 0x4e55_4c4c),
         }
     }
@@ -114,13 +120,15 @@ impl Game {
             }) * delta_seconds);
         self.player
             .move_with_collision(&self.map, displacement, self.config.player_radius);
-        let noise = if sprinting {
+        let movement_noise: f32 = if sprinting {
             1.0
         } else if moving {
             0.42
         } else {
             0.0
         };
+        let noise = movement_noise.max(self.interaction_noise);
+        self.interaction_noise = 0.0;
         let report = self.monster.update(
             &mut self.map,
             self.player.position,
@@ -134,6 +142,10 @@ impl Game {
             self.caught_flash = 0.9;
         }
         self.caught_flash = (self.caught_flash - delta_seconds).max(0.0);
+        self.status_timer = (self.status_timer - delta_seconds).max(0.0);
+        if self.status_timer == 0.0 {
+            self.status_message = None;
+        }
         if report.caught {
             self.state = GameState::Caught;
         }
@@ -144,20 +156,47 @@ impl Game {
             self.player.position.x as usize,
             self.player.position.y as usize,
         );
-        if cell.x.abs_diff(self.objective_cell.x) + cell.y.abs_diff(self.objective_cell.y) <= 1 {
-            self.power_restored = true;
+        if Self::near(cell, self.objective_cell) {
+            if self.power_restored {
+                self.set_status("EMERGENCY POWER: ONLINE");
+            } else {
+                self.power_restored = true;
+                self.interaction_noise = 0.8;
+                self.set_status("EMERGENCY POWER RESTORED");
+            }
             return;
         }
-        if self.power_restored
-            && cell.x.abs_diff(self.exit_cell.x) + cell.y.abs_diff(self.exit_cell.y) <= 1
-        {
-            self.state = GameState::Escaped;
+        if Self::near(cell, self.exit_cell) {
+            if self.power_restored {
+                self.state = GameState::Escaped;
+            } else {
+                self.set_status("EXIT LOCKED - RESTORE EMERGENCY POWER");
+            }
             return;
         }
         self.interact_door();
     }
 
     fn interact_door(&mut self) {
+        let Some(door) = self.door_in_front() else {
+            return;
+        };
+        if self.map.tile(door) == crate::map::Tile::DoorOpen && self.monster.cell() == door {
+            self.set_status("DOOR BLOCKED");
+            return;
+        }
+        let was_closed = self.map.tile(door) == crate::map::Tile::DoorClosed;
+        if self.map.toggle_door(door) {
+            self.interaction_noise = 0.65;
+            self.set_status(if was_closed {
+                "DOOR OPEN"
+            } else {
+                "DOOR CLOSED"
+            });
+        }
+    }
+
+    fn door_in_front(&self) -> Option<crate::geom::Cell> {
         let origin = crate::geom::Cell::new(
             self.player.position.x as usize,
             self.player.position.y as usize,
@@ -183,9 +222,16 @@ impl Game {
                 }
             }
         }
-        if let Some((door, _)) = best {
-            self.map.toggle_door(door);
-        }
+        best.map(|(door, _)| door)
+    }
+
+    fn near(left: crate::geom::Cell, right: crate::geom::Cell) -> bool {
+        left.x.abs_diff(right.x) + left.y.abs_diff(right.y) <= 1
+    }
+
+    fn set_status(&mut self, message: &'static str) {
+        self.status_message = Some(message);
+        self.status_timer = 2.4;
     }
 
     pub fn objective_text(&self) -> &'static str {
@@ -194,6 +240,34 @@ impl Game {
         } else {
             "RESTORE EMERGENCY POWER"
         }
+    }
+
+    pub fn interaction_hint(&self) -> Option<&'static str> {
+        let cell = crate::geom::Cell::new(
+            self.player.position.x as usize,
+            self.player.position.y as usize,
+        );
+        if Self::near(cell, self.objective_cell) {
+            return Some(if self.power_restored {
+                "POWER IS ONLINE"
+            } else {
+                "[E] RESTORE EMERGENCY POWER"
+            });
+        }
+        if Self::near(cell, self.exit_cell) {
+            return Some(if self.power_restored {
+                "[E] OPEN EMERGENCY EXIT"
+            } else {
+                "EXIT LOCKED - RESTORE POWER"
+            });
+        }
+        self.door_in_front().map(|door| {
+            if self.map.tile(door) == crate::map::Tile::DoorClosed {
+                "[E] OPEN DOOR"
+            } else {
+                "[E] CLOSE DOOR"
+            }
+        })
     }
 }
 
@@ -243,6 +317,7 @@ mod tests {
             game.map.tile(crate::geom::Cell::new(2, 1)),
             crate::map::Tile::DoorOpen
         );
+        assert!(game.interaction_noise > 0.0);
     }
 
     #[test]
@@ -283,5 +358,21 @@ mod tests {
         game.handle_command(Command::Retry);
         assert_eq!(game.state, GameState::Playing);
         assert_eq!(game.seed, 19);
+        assert_eq!(game.stamina, game.config.stamina_seconds);
+        assert!(!game.power_restored);
+        assert_eq!(game.chase_count, 0);
+    }
+
+    #[test]
+    fn locked_exit_provides_feedback() {
+        let mut game = Game::new(23);
+        game.state = GameState::Playing;
+        game.player.position = game.exit_cell.center();
+        game.handle_command(Command::Interact);
+        assert_eq!(game.state, GameState::Playing);
+        assert_eq!(
+            game.status_message,
+            Some("EXIT LOCKED - RESTORE EMERGENCY POWER")
+        );
     }
 }

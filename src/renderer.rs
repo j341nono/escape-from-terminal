@@ -49,6 +49,9 @@ fn render_hud(frame: &mut FrameBuffer, game: &Game) {
     let bar = format!("{}{}", "#".repeat(filled), "-".repeat(14 - filled));
     frame.write_at(1, 0, &format!("STAMINA [{bar}]"));
     frame.write_at(1, 1, &format!("OBJECTIVE: {}", game.objective_text()));
+    if let Some(message) = game.status_message.or_else(|| game.interaction_hint()) {
+        frame.write_centered(3, message);
+    }
     if game.caught_flash > 0.0 {
         frame.write_centered(frame.height / 2, "IT SAW YOU");
     }
