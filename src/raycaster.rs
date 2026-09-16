@@ -15,6 +15,38 @@ pub struct RayHit {
     pub side: WallSide,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ViewRay {
+    pub perpendicular_distance: f32,
+    pub side: WallSide,
+}
+
+pub fn cast_view(
+    map: &Map,
+    origin: Vec2,
+    angle: f32,
+    fov: f32,
+    columns: usize,
+    max_distance: f32,
+) -> Vec<ViewRay> {
+    (0..columns)
+        .map(|column| {
+            let camera = (column as f32 + 0.5) / columns as f32;
+            let angle_offset = (camera - 0.5) * fov;
+            let hit = cast_ray(
+                map,
+                origin,
+                Vec2::from_angle(angle + angle_offset),
+                max_distance,
+            );
+            ViewRay {
+                perpendicular_distance: (hit.distance * angle_offset.cos()).max(0.0001),
+                side: hit.side,
+            }
+        })
+        .collect()
+}
+
 pub fn cast_ray(map: &Map, origin: Vec2, direction: Vec2, max_distance: f32) -> RayHit {
     let direction = direction.normalized();
     let mut map_x = origin.x.floor() as isize;
@@ -98,5 +130,21 @@ mod tests {
         );
         assert!((hit.distance - 1.5).abs() < 0.0001);
         assert_eq!(hit.side, WallSide::Horizontal);
+    }
+
+
+    #[test]
+    fn view_distances_are_fisheye_corrected() {
+        let rays = cast_view(
+            &box_map(),
+            Vec2::new(2.5, 2.5),
+            0.0,
+            std::f32::consts::FRAC_PI_3,
+            9,
+            20.0,
+        );
+        for ray in rays {
+            assert!((ray.perpendicular_distance - 1.5).abs() < 0.001);
+        }
     }
 }
