@@ -20,8 +20,12 @@ use std::{
 use crossterm::{event, terminal as crossterm_terminal};
 
 use crate::{
-    args::seed_from_args, config::TARGET_FPS, game::Game, input::InputState,
-    renderer::render_frame, terminal::TerminalSession,
+    args::seed_from_args,
+    config::TARGET_FPS,
+    game::Game,
+    input::{Command, InputState},
+    renderer::render_frame,
+    terminal::TerminalSession,
 };
 
 fn main() {
@@ -49,6 +53,12 @@ fn run() -> Result<(), Box<dyn Error>> {
         while event::poll(Duration::ZERO)? {
             if let event::Event::Key(key) = event::read()? {
                 let command = input.handle_key(key, frame_start);
+                if matches!(
+                    command,
+                    Command::Confirm | Command::TogglePause | Command::Retry | Command::NewFacility
+                ) {
+                    input.clear_movement(frame_start);
+                }
                 game.handle_command(command);
             }
         }

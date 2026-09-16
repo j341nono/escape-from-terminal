@@ -69,6 +69,16 @@ impl InputState {
             sprint: self.sprint_until > now,
         }
     }
+
+    pub fn clear_movement(&mut self, now: Instant) {
+        self.forward_until = now;
+        self.backward_until = now;
+        self.left_until = now;
+        self.right_until = now;
+        self.turn_left_until = now;
+        self.turn_right_until = now;
+        self.sprint_until = now;
+    }
 }
 
 fn axis(positive_until: Instant, negative_until: Instant, now: Instant) -> f32 {
@@ -117,5 +127,21 @@ mod tests {
             now,
         );
         assert_eq!(input.movement(now).strafe, 0.0);
+    }
+
+    #[test]
+    fn modal_transition_clears_latched_keys() {
+        let now = Instant::now();
+        let mut input = InputState::new(now);
+        input.handle_key(
+            KeyEvent::new(KeyCode::Char('w'), crossterm::event::KeyModifiers::NONE),
+            now,
+        );
+        input.handle_key(
+            KeyEvent::new(KeyCode::Char(' '), crossterm::event::KeyModifiers::NONE),
+            now,
+        );
+        input.clear_movement(now);
+        assert_eq!(input.movement(now), MovementInput::default());
     }
 }
