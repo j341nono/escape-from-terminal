@@ -1,5 +1,5 @@
 use crate::{
-    config::{GAME_NAME, MIN_HEIGHT, MIN_WIDTH},
+    config::{GAME_NAME, MAX_RENDER_HEIGHT, MAX_RENDER_WIDTH, MIN_HEIGHT, MIN_WIDTH},
     game::{Game, GameState},
     monster::MONSTER_NAME,
     raycaster::{WallSide, cast_view},
@@ -16,6 +16,8 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
         );
         return frame;
     }
+    let width = width.min(MAX_RENDER_WIDTH);
+    let height = height.min(MAX_RENDER_HEIGHT);
     match game.state {
         GameState::Title => render_title(width, height),
         GameState::Intro => render_intro(width, height),
@@ -463,6 +465,18 @@ mod tests {
                 .lines()
                 .count(),
             24
+        );
+    }
+
+    #[test]
+    fn extreme_terminal_dimensions_are_capped() {
+        let game = Game::new(3);
+        let output = render_frame(&game, 10_000, 10_000).to_terminal_string();
+        assert_eq!(output.lines().count(), MAX_RENDER_HEIGHT);
+        assert!(
+            output
+                .lines()
+                .all(|line| line.chars().count() == MAX_RENDER_WIDTH)
         );
     }
 }
