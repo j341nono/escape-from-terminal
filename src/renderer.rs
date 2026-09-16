@@ -138,14 +138,6 @@ impl FrameBuffer {
         }
     }
 
-    pub fn width(&self) -> usize {
-        self.width
-    }
-
-    pub fn height(&self) -> usize {
-        self.height
-    }
-
     pub fn set(&mut self, x: usize, y: usize, value: char) {
         if x < self.width && y < self.height {
             self.cells[y * self.width + x] = value;

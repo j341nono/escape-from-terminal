@@ -29,18 +29,15 @@ pub fn cast_view(
     columns: usize,
     max_distance: f32,
 ) -> Vec<ViewRay> {
+    let forward = Vec2::from_angle(angle);
     (0..columns)
         .map(|column| {
             let camera = (column as f32 + 0.5) / columns as f32;
             let angle_offset = (camera - 0.5) * fov;
-            let hit = cast_ray(
-                map,
-                origin,
-                Vec2::from_angle(angle + angle_offset),
-                max_distance,
-            );
+            let direction = Vec2::from_angle(angle + angle_offset);
+            let hit = cast_ray(map, origin, direction, max_distance);
             ViewRay {
-                perpendicular_distance: (hit.distance * angle_offset.cos()).max(0.0001),
+                perpendicular_distance: (hit.distance * forward.dot(direction)).max(0.0001),
                 side: hit.side,
             }
         })

@@ -28,10 +28,6 @@ impl Vec2 {
         }
     }
 
-    pub fn distance(self, other: Self) -> f32 {
-        (self - other).length()
-    }
-
     pub fn dot(self, other: Self) -> f32 {
         self.x * other.x + self.y * other.y
     }
@@ -73,10 +69,6 @@ pub struct Cell {
 impl Cell {
     pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
-    }
-
-    pub fn center(self) -> Vec2 {
-        Vec2::new(self.x as f32 + 0.5, self.y as f32 + 0.5)
     }
 }
 

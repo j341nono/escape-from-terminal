@@ -58,13 +58,13 @@ impl Map {
     }
 
     fn validate_enclosed(&self) -> Result<(), String> {
-        let horizontal = (0..self.width).all(|x| {
+        let horizontal = (0..self.width()).all(|x| {
             self.tile(Cell::new(x, 0)) == Tile::Wall
-                && self.tile(Cell::new(x, self.height - 1)) == Tile::Wall
+                && self.tile(Cell::new(x, self.height() - 1)) == Tile::Wall
         });
-        let vertical = (0..self.height).all(|y| {
+        let vertical = (0..self.height()).all(|y| {
             self.tile(Cell::new(0, y)) == Tile::Wall
-                && self.tile(Cell::new(self.width - 1, y)) == Tile::Wall
+                && self.tile(Cell::new(self.width() - 1, y)) == Tile::Wall
         });
         if horizontal && vertical {
             Ok(())
@@ -115,23 +115,6 @@ impl Map {
                 && point.y >= 0.0
                 && self.is_walkable(Cell::new(point.x as usize, point.y as usize))
         })
-    }
-
-    pub fn neighbors(&self, cell: Cell) -> Vec<Cell> {
-        let mut result = Vec::with_capacity(4);
-        for (dx, dy) in [(0isize, -1isize), (1, 0), (0, 1), (-1, 0)] {
-            let Some(x) = cell.x.checked_add_signed(dx) else {
-                continue;
-            };
-            let Some(y) = cell.y.checked_add_signed(dy) else {
-                continue;
-            };
-            let next = Cell::new(x, y);
-            if self.in_bounds(next) && !self.tile(next).blocks_movement() {
-                result.push(next);
-            }
-        }
-        result
     }
 }
 
