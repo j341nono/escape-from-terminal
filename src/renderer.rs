@@ -1,3 +1,8 @@
+use crate::{
+    game::Game,
+    raycaster::{WallSide, cast_view},
+};
+
 #[derive(Debug, Clone)]
 pub struct FrameBuffer {
     width: usize,
@@ -24,11 +29,28 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
         let wall_height = (height as f32 / ray.perpendicular_distance) as usize;
         let top = height.saturating_sub(wall_height) / 2;
         let bottom = (top + wall_height).min(height);
+        let shade = wall_shade(ray.perpendicular_distance, ray.side);
         for y in top..bottom {
-            frame.set(x, y, '█');
+            frame.set(x, y, shade);
         }
     }
     frame
+}
+
+fn wall_shade(distance: f32, side: WallSide) -> char {
+    let distance = distance
+        + if side == WallSide::Horizontal {
+            0.9
+        } else {
+            0.0
+        };
+    match distance {
+        value if value < 1.6 => '█',
+        value if value < 3.5 => '▓',
+        value if value < 7.0 => '▒',
+        value if value < 13.0 => '░',
+        _ => '.',
+    }
 }
 
 impl FrameBuffer {
@@ -91,8 +113,18 @@ mod tests {
         game.player.position = crate::geom::Vec2::new(3.5, 2.5);
         game.player.angle = 0.0;
         let output = render_world(&game, 20, 10).to_terminal_string();
-        assert!(output.contains('█'));
+        assert!(
+            output
+                .chars()
+                .any(|cell| matches!(cell, '█' | '▓' | '▒' | '░' | '.'))
+        );
         assert_eq!(output.lines().count(), 10);
     }
+
+    #[test]
+    fn wall_shading_fades_with_distance() {
+        assert_eq!(wall_shade(1.0, WallSide::Vertical), '█');
+        assert_eq!(wall_shade(5.0, WallSide::Vertical), '▒');
+        assert_eq!(wall_shade(20.0, WallSide::Vertical), '.');
+    }
 }
-use crate::{game::Game, raycaster::cast_view};
