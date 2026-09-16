@@ -55,7 +55,6 @@ fn render_hud(frame: &mut FrameBuffer, game: &Game) {
     if game.caught_flash > 0.0 {
         frame.write_centered(frame.height / 2, "IT SAW YOU");
     }
-    let _ = MONSTER_NAME;
 }
 
 fn render_intro(width: usize, height: usize) -> FrameBuffer {
@@ -84,6 +83,7 @@ fn render_caught(width: usize, height: usize) -> FrameBuffer {
         frame.write_centered(middle.saturating_sub(6) + offset, line);
     }
     frame.write_centered(middle, "YOU WERE FOUND");
+    frame.write_centered(middle + 1, &format!("SUBJECT: {MONSTER_NAME}"));
     frame.write_centered(middle + 3, "R  RETRY SAME FACILITY");
     frame.write_centered(middle + 4, "N  NEW FACILITY");
     frame.write_centered(middle + 5, "Q  QUIT");
@@ -213,7 +213,7 @@ fn apply_proximity_glitch(frame: &mut FrameBuffer, game: &Game) {
         frame.set(0, y, if index % 2 == 0 { '%' } else { '?' });
         frame.set(frame.width.saturating_sub(1), (y + 5) % frame.height, '#');
     }
-    if distance < 4.0 && phase.is_multiple_of(47) {
+    if distance < 4.0 && phase.is_multiple_of(359) {
         frame.write_centered(2, "SIGNAL: NULL");
     }
 }
