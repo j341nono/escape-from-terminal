@@ -91,7 +91,7 @@ fn generate_attempt(seed: u64, rng: &mut StdRng) -> Option<Facility> {
     }
     let start = rooms[0].center();
     let objective = farthest(&map, start, &rooms)?;
-    let exit = farthest(&map, objective, &rooms)?;
+    let exit = choose_exit(&map, start, objective, &rooms)?;
     let monster_spawn = choose_monster_spawn(&map, start, objective, exit, &rooms)?;
     if objective == exit {
         return None;
@@ -134,6 +134,20 @@ fn choose_monster_spawn(
             let from_exit = path_distance(map, exit, cell, false)?;
             (from_start >= 18 && from_objective >= 10 && from_exit >= 10)
                 .then_some((from_start + 2 * from_objective.min(from_exit), cell))
+        })
+        .max_by_key(|pair| pair.0)
+        .map(|pair| pair.1)
+}
+
+fn choose_exit(map: &Map, start: Cell, objective: Cell, rooms: &[Room]) -> Option<Cell> {
+    rooms
+        .iter()
+        .map(|room| room.center())
+        .filter(|cell| *cell != start && *cell != objective)
+        .filter_map(|cell| {
+            let from_start = path_distance(map, start, cell, false)?;
+            let from_objective = path_distance(map, objective, cell, false)?;
+            (from_start >= 12 && from_objective >= 22).then_some((from_objective, cell))
         })
         .max_by_key(|pair| pair.0)
         .map(|pair| pair.1)
@@ -235,6 +249,12 @@ mod tests {
                     .is_some_and(|distance| distance >= 22),
                 "seed {seed}"
             );
+            assert!(
+                path_distance(&facility.map, facility.start, facility.exit, true)
+                    .is_some_and(|distance| distance >= 12),
+                "seed {seed}"
+            );
+            assert_ne!(facility.start, facility.exit, "seed {seed}");
             assert!(
                 path_distance(&facility.map, facility.start, facility.monster_spawn, true)
                     .is_some_and(|distance| distance >= 18),
