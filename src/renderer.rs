@@ -162,7 +162,25 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
         }
     }
     render_monster(&mut frame, game, &rays);
+    apply_proximity_glitch(&mut frame, game);
     frame
+}
+
+fn apply_proximity_glitch(frame: &mut FrameBuffer, game: &Game) {
+    let distance = game.player.position.distance(game.monster.position);
+    if distance >= 8.0 {
+        return;
+    }
+    let intensity = ((8.0 - distance) * 2.0) as usize;
+    let phase = (game.elapsed_seconds * 19.0) as usize;
+    for index in 0..intensity.min(frame.height / 2) {
+        let y = (phase + index * 3) % frame.height;
+        frame.set(0, y, if index % 2 == 0 { '%' } else { '?' });
+        frame.set(frame.width.saturating_sub(1), (y + 5) % frame.height, '#');
+    }
+    if distance < 4.0 && phase % 47 == 0 {
+        frame.write_centered(2, "SIGNAL: NULL");
+    }
 }
 
 fn render_monster(frame: &mut FrameBuffer, game: &Game, wall_depth: &[crate::raycaster::ViewRay]) {
