@@ -1,9 +1,12 @@
 use std::f32::consts::PI;
 
+use rand::Rng;
+
 use crate::{
     config::GameConfig,
     geom::{Cell, Vec2},
-    map::Map,
+    map::{Map, Tile},
+    pathfinding::shortest_path,
 };
 
 pub const MONSTER_NAME: &str = "SPECIMEN-NULL";
@@ -27,6 +30,12 @@ pub struct Monster {
     pub repath_timer: f32,
     pub search_timer: f32,
     pub door_timer: f32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MonsterReport {
+    pub spotted: bool,
+    pub caught: bool,
 }
 
 impl Monster {
@@ -60,6 +69,118 @@ impl Monster {
         }
         line_of_sight(map, self.position, player)
     }
+
+    pub fn update<R: Rng>(
+        &mut self,
+        map: &mut Map,
+        player: Vec2,
+        noise: f32,
+        delta: f32,
+        config: &GameConfig,
+        rng: &mut R,
+    ) -> MonsterReport {
+        let mut report = MonsterReport::default();
+        self.repath_timer -= delta;
+        self.door_timer = (self.door_timer - delta).max(0.0);
+        let player_cell = Cell::new(player.x as usize, player.y as usize);
+        if self.can_see(player, map, config) {
+            report.spotted = self.state != AiState::Chasing;
+            self.state = AiState::Chasing;
+            self.last_known = Some(player_cell);
+            self.search_timer = 7.0;
+        } else if self.state == AiState::Chasing {
+            self.state = AiState::Searching;
+        } else if self.state == AiState::Wandering
+            && noise > 0.0
+            && self.position.distance(player) < config.monster_hearing_range * noise
+        {
+            self.state = AiState::Suspicious;
+            self.last_known = Some(player_cell);
+        }
+        if self.state == AiState::Searching {
+            self.search_timer -= delta;
+            if self.search_timer <= 0.0 {
+                self.state = AiState::Wandering;
+                self.last_known = None;
+                self.path.clear();
+            }
+        }
+        if self.state == AiState::Wandering
+            && (self.path_index >= self.path.len() || self.repath_timer <= 0.0)
+        {
+            self.last_known = random_floor(map, rng);
+        }
+        let target = match self.state {
+            AiState::Chasing => Some(player_cell),
+            AiState::Suspicious | AiState::Searching | AiState::Wandering => self.last_known,
+        };
+        if let Some(target) = target {
+            if self.repath_timer <= 0.0
+                || self.path.last().copied() != Some(target)
+                || self.path_index >= self.path.len()
+            {
+                self.path = shortest_path(map, self.cell(), target, true).unwrap_or_default();
+                self.path_index = 1.min(self.path.len());
+                self.repath_timer = if self.state == AiState::Chasing {
+                    0.28
+                } else {
+                    0.9
+                };
+            }
+            self.follow_path(map, delta, config);
+            if self.state == AiState::Suspicious && self.cell() == target {
+                self.state = AiState::Searching;
+                self.search_timer = 4.0;
+            }
+        }
+        report.caught = self.position.distance(player) < 0.52;
+        report
+    }
+
+    fn follow_path(&mut self, map: &mut Map, delta: f32, config: &GameConfig) {
+        let Some(next) = self.path.get(self.path_index).copied() else {
+            return;
+        };
+        if map.tile(next) == Tile::DoorClosed {
+            self.door_timer += delta;
+            if self.door_timer >= 1.1 {
+                map.toggle_door(next);
+                self.door_timer = 0.0;
+            } else {
+                return;
+            }
+        }
+        let target = next.center();
+        let offset = target - self.position;
+        if offset.length() < 0.12 {
+            self.path_index += 1;
+            return;
+        }
+        let direction = offset.normalized();
+        self.heading = direction.y.atan2(direction.x);
+        let speed = if self.state == AiState::Chasing {
+            config.monster_chase_speed
+        } else {
+            config.monster_wander_speed
+        };
+        let next_position = self.position + direction * (speed * delta);
+        if map.is_walkable_position(next_position, config.player_radius) {
+            self.position = next_position;
+        }
+    }
+}
+
+fn random_floor<R: Rng>(map: &Map, rng: &mut R) -> Option<Cell> {
+    for _ in 0..80 {
+        let cell = Cell::new(
+            rng.random_range(1..map.width() - 1),
+            rng.random_range(1..map.height() - 1),
+        );
+        if map.is_walkable(cell) {
+            return Some(cell);
+        }
+    }
+    None
 }
 
 pub fn line_of_sight(map: &Map, from: Vec2, to: Vec2) -> bool {
