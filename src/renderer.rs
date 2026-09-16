@@ -16,6 +16,8 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
         return frame;
     }
 
+    render_floor_and_ceiling(&mut frame);
+
     let rays = cast_view(
         &game.map,
         game.player.position,
@@ -35,6 +37,26 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
         }
     }
     frame
+}
+
+fn render_floor_and_ceiling(frame: &mut FrameBuffer) {
+    let horizon = frame.height / 2;
+    for y in 0..frame.height {
+        let glyph = if y < horizon {
+            let depth = (horizon - y) as f32 / horizon.max(1) as f32;
+            if depth > 0.78 { '.' } else { ' ' }
+        } else {
+            let depth = (y - horizon) as f32 / (frame.height - horizon).max(1) as f32;
+            match depth {
+                value if value > 0.76 => ':',
+                value if value > 0.42 => '.',
+                _ => ' ',
+            }
+        };
+        for x in 0..frame.width {
+            frame.set(x, y, glyph);
+        }
+    }
 }
 
 fn wall_shade(distance: f32, side: WallSide) -> char {
@@ -126,5 +148,14 @@ mod tests {
         assert_eq!(wall_shade(1.0, WallSide::Vertical), '█');
         assert_eq!(wall_shade(5.0, WallSide::Vertical), '▒');
         assert_eq!(wall_shade(20.0, WallSide::Vertical), '.');
+    }
+
+    #[test]
+    fn floor_and_ceiling_have_depth_patterns() {
+        let mut frame = FrameBuffer::new(8, 12, ' ');
+        render_floor_and_ceiling(&mut frame);
+        let output = frame.to_terminal_string();
+        assert!(output.lines().next().unwrap().contains('.'));
+        assert!(output.lines().last().unwrap().contains(':'));
     }
 }
