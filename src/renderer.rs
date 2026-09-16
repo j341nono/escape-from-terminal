@@ -1,10 +1,19 @@
 use crate::{
-    config::GAME_NAME,
+    config::{GAME_NAME, MIN_HEIGHT, MIN_WIDTH},
     game::{Game, GameState},
     raycaster::{WallSide, cast_view},
 };
 
 pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
+    if width < usize::from(MIN_WIDTH) || height < usize::from(MIN_HEIGHT) {
+        let mut frame = FrameBuffer::new(width, height, ' ');
+        frame.write_centered(height.saturating_sub(2) / 2, "Terminal too small.");
+        frame.write_centered(
+            height / 2,
+            &format!("Please resize to at least {MIN_WIDTH}x{MIN_HEIGHT}."),
+        );
+        return frame;
+    }
     match game.state {
         GameState::Title => render_title(width, height),
         GameState::Playing => {
@@ -41,10 +50,10 @@ fn render_title(width: usize, height: usize) -> FrameBuffer {
     for (line, text) in logo.iter().enumerate() {
         frame.write_centered(top + line, text);
     }
+    frame.write_centered(top + logo.len(), GAME_NAME);
     frame.write_centered(top + logo.len() + 2, "NO RECORD OF THIS FACILITY EXISTS.");
     frame.write_centered(top + logo.len() + 5, "ENTER  START");
     frame.write_centered(top + logo.len() + 6, "Q      QUIT");
-    debug_assert_eq!(GAME_NAME, "NULL SECTOR");
     frame
 }
 
@@ -215,6 +224,15 @@ mod tests {
         let game = Game::new().expect("game should initialize");
         let title = render_frame(&game, 80, 24).to_terminal_string();
         assert!(title.contains("NO RECORD OF THIS FACILITY EXISTS."));
+        assert!(title.contains(GAME_NAME));
         assert!(title.contains("ENTER  START"));
+    }
+
+    #[test]
+    fn small_terminals_receive_resize_instructions() {
+        let game = Game::new().expect("game should initialize");
+        let output = render_frame(&game, 60, 18).to_terminal_string();
+        assert!(output.contains("Terminal too small."));
+        assert!(output.contains("80x24"));
     }
 }
