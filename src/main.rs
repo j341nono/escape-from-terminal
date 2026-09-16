@@ -4,6 +4,7 @@ mod generator;
 mod geom;
 mod input;
 mod map;
+mod monster;
 mod pathfinding;
 mod player;
 mod raycaster;
