@@ -1,6 +1,6 @@
 use crate::{
     config::GameConfig,
-    input::Command,
+    input::{Command, MovementInput},
     level::training_sector,
     map::Map,
     player::Player,
@@ -45,6 +45,20 @@ impl Game {
     pub fn is_running(&self) -> bool {
         self.state != GameState::Exiting
     }
+
+    pub fn update(&mut self, input: MovementInput, delta_seconds: f32) {
+        if self.state != GameState::Playing {
+            return;
+        }
+
+        let delta_seconds = delta_seconds.clamp(0.0, 0.1);
+        self.player
+            .rotate(input.turn, self.config.rotation_speed, delta_seconds);
+        let displacement = self.player.movement_direction(input)
+            * (self.config.walk_speed * delta_seconds);
+        self.player
+            .move_with_collision(&self.map, displacement, self.config.player_radius);
+    }
 }
 
 #[cfg(test)]
@@ -62,5 +76,21 @@ mod tests {
         assert_eq!(game.state, GameState::Playing);
         game.handle_command(Command::Quit);
         assert!(!game.is_running());
+    }
+
+
+    #[test]
+    fn movement_updates_only_while_playing() {
+        let mut game = Game::new().expect("game should initialize");
+        let start = game.player.position;
+        let input = MovementInput {
+            forward: 1.0,
+            ..MovementInput::default()
+        };
+        game.update(input, 0.1);
+        assert_eq!(game.player.position, start);
+        game.handle_command(Command::Confirm);
+        game.update(input, 0.1);
+        assert!(game.player.position.x > start.x);
     }
 }
