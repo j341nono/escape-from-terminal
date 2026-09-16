@@ -84,11 +84,14 @@ pub fn cast_ray(map: &Map, origin: Vec2, direction: Vec2, max_distance: f32) -> 
             (distance, WallSide::Horizontal)
         };
 
-        if distance >= max_distance || map_x < 0 || map_y < 0 {
+        if !distance.is_finite() || distance >= max_distance {
             return RayHit {
                 distance: max_distance,
                 side,
             };
+        }
+        if map_x < 0 || map_y < 0 {
+            return RayHit { distance, side };
         }
 
         if map
@@ -135,5 +138,29 @@ mod tests {
         for ray in rays {
             assert!((ray.perpendicular_distance - 1.5).abs() < 0.001);
         }
+    }
+
+    #[test]
+    fn zero_direction_returns_finite_render_limit() {
+        let hit = cast_ray(&box_map(), Vec2::new(2.5, 2.5), Vec2::new(0.0, 0.0), 20.0);
+        assert_eq!(hit.distance, 20.0);
+        assert!(hit.distance.is_finite());
+    }
+
+    #[test]
+    fn negative_map_boundary_reports_actual_distance() {
+        let map = Map::filled(3, 3, crate::map::Tile::Floor);
+        let hit = cast_ray(&map, Vec2::new(1.5, 1.5), Vec2::new(-1.0, 0.0), 20.0);
+        assert!((hit.distance - 1.5).abs() < 0.0001);
+    }
+
+    #[test]
+    fn closed_doors_occlude_rays_until_opened() {
+        let mut map = Map::from_ascii(&["#####", "#.D.#", "#####"]).unwrap();
+        let closed = cast_ray(&map, Vec2::new(1.5, 1.5), Vec2::new(1.0, 0.0), 20.0);
+        map.toggle_door(Cell::new(2, 1));
+        let open = cast_ray(&map, Vec2::new(1.5, 1.5), Vec2::new(1.0, 0.0), 20.0);
+        assert!((closed.distance - 0.5).abs() < 0.0001);
+        assert!((open.distance - 2.5).abs() < 0.0001);
     }
 }
