@@ -1,7 +1,52 @@
 use crate::{
-    game::Game,
+    config::GAME_NAME,
+    game::{Game, GameState},
     raycaster::{WallSide, cast_view},
 };
+
+pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
+    match game.state {
+        GameState::Title => render_title(width, height),
+        GameState::Playing => {
+            let mut frame = render_world(game, width, height);
+            frame.write_at(
+                1,
+                height.saturating_sub(1),
+                "WASD MOVE  ←/→ TURN  ESC PAUSE  Q QUIT",
+            );
+            frame
+        }
+        GameState::Paused => {
+            let mut frame = render_world(game, width, height);
+            let middle = height / 2;
+            frame.write_centered(middle.saturating_sub(1), "[ PAUSED ]");
+            frame.write_centered(middle + 1, "ESC / ENTER  RESUME");
+            frame.write_centered(middle + 2, "Q            QUIT");
+            frame
+        }
+        GameState::Exiting => FrameBuffer::new(width, height, ' '),
+    }
+}
+
+fn render_title(width: usize, height: usize) -> FrameBuffer {
+    let mut frame = FrameBuffer::new(width, height, ' ');
+    let logo = [
+        " _   _ _   _ _     _       ____  _____ ____ _____ ___  ____  ",
+        "| \\ | | | | | |   | |     / ___|| ____/ ___|_   _/ _ \\|  _ \\ ",
+        "|  \\| | | | | |   | |     \\___ \\|  _|| |     | || | | | |_) |",
+        "| |\\  | |_| | |___| |___   ___) | |__| |___  | || |_| |  _ < ",
+        "|_| \\_|\\___/|_____|_____| |____/|_____\\____| |_| \\___/|_| \\_\\",
+    ];
+    let top = height.saturating_sub(logo.len() + 8) / 2;
+    for (line, text) in logo.iter().enumerate() {
+        frame.write_centered(top + line, text);
+    }
+    frame.write_centered(top + logo.len() + 2, "NO RECORD OF THIS FACILITY EXISTS.");
+    frame.write_centered(top + logo.len() + 5, "ENTER  START");
+    frame.write_centered(top + logo.len() + 6, "Q      QUIT");
+    debug_assert_eq!(GAME_NAME, "NULL SECTOR");
+    frame
+}
 
 #[derive(Debug, Clone)]
 pub struct FrameBuffer {
@@ -106,6 +151,12 @@ impl FrameBuffer {
         }
     }
 
+    pub fn write_at(&mut self, x: usize, y: usize, text: &str) {
+        for (offset, character) in text.chars().enumerate() {
+            self.set(x + offset, y, character);
+        }
+    }
+
     pub fn to_terminal_string(&self) -> String {
         let mut output = String::with_capacity((self.width + 2) * self.height);
         for (row, cells) in self.cells.chunks(self.width).enumerate() {
@@ -157,5 +208,13 @@ mod tests {
         let output = frame.to_terminal_string();
         assert!(output.lines().next().unwrap().contains('.'));
         assert!(output.lines().last().unwrap().contains(':'));
+    }
+
+    #[test]
+    fn title_uses_canonical_game_name_art() {
+        let game = Game::new().expect("game should initialize");
+        let title = render_frame(&game, 80, 24).to_terminal_string();
+        assert!(title.contains("NO RECORD OF THIS FACILITY EXISTS."));
+        assert!(title.contains("ENTER  START"));
     }
 }
