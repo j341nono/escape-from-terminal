@@ -409,4 +409,60 @@ mod tests {
                 .contains('@')
         );
     }
+
+    #[test]
+    fn wall_fully_occludes_monster_sprite() {
+        let mut game = Game::new(3);
+        game.map =
+            crate::map::Map::from_ascii(&["#######", "#..#..#", "#..#..#", "#######"]).unwrap();
+        game.player.position = crate::geom::Vec2::new(2.5, 1.5);
+        game.player.angle = 0.0;
+        game.monster.position = crate::geom::Vec2::new(4.5, 1.5);
+        assert!(
+            !render_world(&game, 80, 24)
+                .to_terminal_string()
+                .contains('@')
+        );
+    }
+
+    #[test]
+    fn monster_behind_player_is_not_rendered() {
+        let mut game = Game::new(3);
+        game.map =
+            crate::map::Map::from_ascii(&["#######", "#.....#", "#.....#", "#######"]).unwrap();
+        game.player.position = crate::geom::Vec2::new(3.5, 1.5);
+        game.player.angle = 0.0;
+        game.monster.position = crate::geom::Vec2::new(1.5, 1.5);
+        assert!(
+            !render_world(&game, 80, 24)
+                .to_terminal_string()
+                .contains('@')
+        );
+    }
+
+    #[test]
+    fn very_close_monster_and_fov_edge_are_bounds_safe() {
+        let mut game = Game::new(3);
+        game.map =
+            crate::map::Map::from_ascii(&["#######", "#.....#", "#.....#", "#######"]).unwrap();
+        game.player.position = crate::geom::Vec2::new(3.5, 1.5);
+        game.player.angle = 0.0;
+        game.monster.position = crate::geom::Vec2::new(3.51, 1.5);
+        assert_eq!(
+            render_world(&game, 80, 24)
+                .to_terminal_string()
+                .lines()
+                .count(),
+            24
+        );
+        game.monster.position =
+            game.player.position + crate::geom::Vec2::from_angle(game.config.fov * 0.55) * 3.0;
+        assert_eq!(
+            render_world(&game, 80, 24)
+                .to_terminal_string()
+                .lines()
+                .count(),
+            24
+        );
+    }
 }
