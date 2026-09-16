@@ -9,6 +9,7 @@ pub enum Command {
     None,
     Confirm,
     TogglePause,
+    Interact,
     Quit,
 }
 
@@ -46,6 +47,7 @@ impl InputState {
             KeyCode::Right => self.turn_right_until = deadline,
             KeyCode::Enter if active => return Command::Confirm,
             KeyCode::Esc if active => return Command::TogglePause,
+            KeyCode::Char('e' | 'E') if active => return Command::Interact,
             KeyCode::Char('q' | 'Q') if active => return Command::Quit,
             _ => {}
         }

@@ -48,6 +48,9 @@ impl Game {
             (GameState::Paused, Command::TogglePause | Command::Confirm) => GameState::Playing,
             (state, _) => state,
         };
+        if command == Command::Interact && self.state == GameState::Playing {
+            self.interact_door();
+        }
     }
 
     pub fn is_running(&self) -> bool {
@@ -66,6 +69,37 @@ impl Game {
             self.player.movement_direction(input) * (self.config.walk_speed * delta_seconds);
         self.player
             .move_with_collision(&self.map, displacement, self.config.player_radius);
+    }
+
+    fn interact_door(&mut self) {
+        let origin = crate::geom::Cell::new(
+            self.player.position.x as usize,
+            self.player.position.y as usize,
+        );
+        let forward = self.player.forward();
+        let mut best = None;
+        for (dx, dy) in [(0isize, -1isize), (1, 0), (0, 1), (-1, 0)] {
+            let Some(x) = origin.x.checked_add_signed(dx) else {
+                continue;
+            };
+            let Some(y) = origin.y.checked_add_signed(dy) else {
+                continue;
+            };
+            let candidate = crate::geom::Cell::new(x, y);
+            let direction = crate::geom::Vec2::new(dx as f32, dy as f32);
+            if matches!(
+                self.map.tile(candidate),
+                crate::map::Tile::DoorClosed | crate::map::Tile::DoorOpen
+            ) {
+                let score = forward.dot(direction);
+                if score > 0.15 && best.is_none_or(|(_, current)| score > current) {
+                    best = Some((candidate, score));
+                }
+            }
+        }
+        if let Some((door, _)) = best {
+            self.map.toggle_door(door);
+        }
     }
 }
 
@@ -99,5 +133,18 @@ mod tests {
         game.handle_command(Command::Confirm);
         game.update(input, 0.1);
         assert!(game.player.position.x > start.x);
+    }
+
+    #[test]
+    fn interaction_toggles_door_in_front_of_player() {
+        let mut game = Game::new(1);
+        game.map = Map::from_ascii(&["#####", "#.D.#", "#####"]).unwrap();
+        game.player = Player::new(crate::geom::Vec2::new(1.5, 1.5), 0.0);
+        game.state = GameState::Playing;
+        game.handle_command(Command::Interact);
+        assert_eq!(
+            game.map.tile(crate::geom::Cell::new(2, 1)),
+            crate::map::Tile::DoorOpen
+        );
     }
 }
