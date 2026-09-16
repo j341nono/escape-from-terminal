@@ -2,5 +2,9 @@
 name = "null-sector"
 version = "0.1.0"
 edition = "2024"
+description = "A terminal ray-cast survival horror game"
+license = "MIT"
 
 [dependencies]
+crossterm = "0.29"
+rand = "0.9"
