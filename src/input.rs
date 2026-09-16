@@ -21,6 +21,7 @@ pub struct InputState {
     right_until: Instant,
     turn_left_until: Instant,
     turn_right_until: Instant,
+    sprint_until: Instant,
 }
 
 impl InputState {
@@ -32,6 +33,7 @@ impl InputState {
             right_until: now,
             turn_left_until: now,
             turn_right_until: now,
+            sprint_until: now,
         }
     }
 
@@ -45,6 +47,7 @@ impl InputState {
             KeyCode::Char('d' | 'D') => self.right_until = deadline,
             KeyCode::Left => self.turn_left_until = deadline,
             KeyCode::Right => self.turn_right_until = deadline,
+            KeyCode::Char(' ') => self.sprint_until = deadline,
             KeyCode::Enter if active => return Command::Confirm,
             KeyCode::Esc if active => return Command::TogglePause,
             KeyCode::Char('e' | 'E') if active => return Command::Interact,
@@ -59,6 +62,7 @@ impl InputState {
             forward: axis(self.forward_until, self.backward_until, now),
             strafe: axis(self.right_until, self.left_until, now),
             turn: axis(self.turn_right_until, self.turn_left_until, now),
+            sprint: self.sprint_until > now,
         }
     }
 }
@@ -72,6 +76,7 @@ pub struct MovementInput {
     pub forward: f32,
     pub strafe: f32,
     pub turn: f32,
+    pub sprint: bool,
 }
 
 #[cfg(test)]
