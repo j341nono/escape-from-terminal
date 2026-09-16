@@ -29,6 +29,7 @@ pub struct Game {
     pub exit_cell: crate::geom::Cell,
     pub monster: Monster,
     pub stamina: f32,
+    pub sprint_exhausted: bool,
     pub power_restored: bool,
     pub elapsed_seconds: f32,
     pub chase_count: u32,
@@ -52,6 +53,7 @@ impl Game {
             exit_cell: facility.exit,
             monster: Monster::new(facility.monster_spawn),
             stamina: GameConfig::default().stamina_seconds,
+            sprint_exhausted: false,
             power_restored: false,
             elapsed_seconds: 0.0,
             chase_count: 0,
@@ -105,9 +107,15 @@ impl Game {
         self.player
             .rotate(input.turn, self.config.rotation_speed, delta_seconds);
         let moving = input.forward != 0.0 || input.strafe != 0.0;
-        let sprinting = input.sprint && moving && self.stamina > 0.0;
+        if self.sprint_exhausted && self.stamina >= self.config.stamina_resume {
+            self.sprint_exhausted = false;
+        }
+        let sprinting = input.sprint && moving && !self.sprint_exhausted;
         if sprinting {
             self.stamina = (self.stamina - delta_seconds).max(0.0);
+            if self.stamina == 0.0 {
+                self.sprint_exhausted = true;
+            }
         } else {
             self.stamina = (self.stamina + self.config.stamina_recovery * delta_seconds)
                 .min(self.config.stamina_seconds);
@@ -361,6 +369,7 @@ mod tests {
         assert_eq!(game.stamina, game.config.stamina_seconds);
         assert!(!game.power_restored);
         assert_eq!(game.chase_count, 0);
+        assert!(!game.sprint_exhausted);
     }
 
     #[test]
@@ -374,5 +383,22 @@ mod tests {
             game.status_message,
             Some("EXIT LOCKED - RESTORE EMERGENCY POWER")
         );
+    }
+
+    #[test]
+    fn exhausted_sprint_requires_partial_recovery() {
+        let mut game = Game::new(29);
+        game.state = GameState::Playing;
+        game.stamina = 0.01;
+        let sprint = MovementInput {
+            forward: 1.0,
+            sprint: true,
+            ..MovementInput::default()
+        };
+        game.update(sprint, 0.1);
+        assert!(game.sprint_exhausted);
+        game.update(sprint, 0.1);
+        assert!(game.stamina > 0.0);
+        assert!(game.sprint_exhausted);
     }
 }
