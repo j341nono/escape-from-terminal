@@ -18,7 +18,7 @@ impl Tile {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Map {
     width: usize,
     height: usize,

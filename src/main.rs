@@ -1,5 +1,6 @@
 mod config;
 mod game;
+mod generator;
 mod geom;
 mod input;
 mod level;
