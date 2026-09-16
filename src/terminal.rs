@@ -13,6 +13,7 @@ use crossterm::{
 pub struct TerminalSession {
     output: Stdout,
     active: bool,
+    previous_frame: String,
 }
 
 impl TerminalSession {
@@ -26,12 +27,18 @@ impl TerminalSession {
         Ok(Self {
             output,
             active: true,
+            previous_frame: String::new(),
         })
     }
 
     pub fn draw(&mut self, frame: &str) -> io::Result<()> {
+        if self.previous_frame == frame {
+            return Ok(());
+        }
         queue!(self.output, MoveTo(0, 0), Print(frame))?;
-        self.output.flush()
+        self.output.flush()?;
+        frame.clone_into(&mut self.previous_frame);
+        Ok(())
     }
 
     fn restore(&mut self) {
