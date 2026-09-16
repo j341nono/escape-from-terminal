@@ -431,4 +431,19 @@ mod tests {
         assert_ne!(game.seed, 37);
         assert_eq!(game.state, GameState::Playing);
     }
+
+    #[test]
+    fn door_cannot_close_on_monster() {
+        let mut game = Game::new(41);
+        game.map = Map::from_ascii(&["#####", "#.d.#", "#####"]).unwrap();
+        game.player = Player::new(crate::geom::Vec2::new(1.5, 1.5), 0.0);
+        game.monster.position = crate::geom::Vec2::new(2.5, 1.5);
+        game.state = GameState::Playing;
+        game.handle_command(Command::Interact);
+        assert_eq!(
+            game.map.tile(crate::geom::Cell::new(2, 1)),
+            crate::map::Tile::DoorOpen
+        );
+        assert_eq!(game.status_message, Some("DOOR BLOCKED"));
+    }
 }
