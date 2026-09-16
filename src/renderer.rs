@@ -1,6 +1,7 @@
 use crate::{
     config::{GAME_NAME, MIN_HEIGHT, MIN_WIDTH},
     game::{Game, GameState},
+    monster::MONSTER_NAME,
     raycaster::{WallSide, cast_view},
 };
 use std::f32::consts::PI;
@@ -20,10 +21,11 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
         GameState::Intro => render_intro(width, height),
         GameState::Playing => {
             let mut frame = render_world(game, width, height);
+            render_hud(&mut frame, game);
             frame.write_at(
                 1,
                 height.saturating_sub(1),
-                "WASD MOVE  ←/→ TURN  ESC PAUSE  Q QUIT",
+                "WASD MOVE  SPACE RUN  ←/→ TURN  E USE  ESC PAUSE  Q QUIT",
             );
             frame
         }
@@ -33,12 +35,24 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
             frame.write_centered(middle.saturating_sub(1), "[ PAUSED ]");
             frame.write_centered(middle + 1, "ESC / ENTER  RESUME");
             frame.write_centered(middle + 2, "Q            QUIT");
+            frame.write_centered(middle + 4, &format!("SEED: {}", game.seed));
             frame
         }
         GameState::Caught => render_caught(width, height),
         GameState::Escaped => render_escaped(game, width, height),
         GameState::Exiting => FrameBuffer::new(width, height, ' '),
     }
+}
+
+fn render_hud(frame: &mut FrameBuffer, game: &Game) {
+    let filled = ((game.stamina / game.config.stamina_seconds) * 14.0).round() as usize;
+    let bar = format!("{}{}", "#".repeat(filled), "-".repeat(14 - filled));
+    frame.write_at(1, 0, &format!("STAMINA [{bar}]"));
+    frame.write_at(1, 1, &format!("OBJECTIVE: {}", game.objective_text()));
+    if game.caught_flash > 0.0 {
+        frame.write_centered(frame.height / 2, "IT SAW YOU");
+    }
+    let _ = MONSTER_NAME;
 }
 
 fn render_intro(width: usize, height: usize) -> FrameBuffer {
