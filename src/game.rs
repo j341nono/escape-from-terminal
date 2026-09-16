@@ -401,4 +401,32 @@ mod tests {
         assert!(game.stamina > 0.0);
         assert!(game.sprint_exhausted);
     }
+
+    #[test]
+    fn retry_reconstructs_same_facility_without_stale_state() {
+        let mut game = Game::new(31);
+        let original_map = game.map.clone();
+        let original_spawn = game.monster.position;
+        game.state = GameState::Caught;
+        game.power_restored = true;
+        game.stamina = 0.0;
+        game.chase_count = 5;
+        game.monster.path.push(game.exit_cell);
+        game.handle_command(Command::Retry);
+        assert_eq!(game.map, original_map);
+        assert_eq!(game.monster.position, original_spawn);
+        assert!(game.monster.path.is_empty());
+        assert_eq!(game.stamina, game.config.stamina_seconds);
+        assert_eq!(game.chase_count, 0);
+        assert!(!game.power_restored);
+    }
+
+    #[test]
+    fn new_facility_changes_seed() {
+        let mut game = Game::new(37);
+        game.state = GameState::Caught;
+        game.handle_command(Command::NewFacility);
+        assert_ne!(game.seed, 37);
+        assert_eq!(game.state, GameState::Playing);
+    }
 }
