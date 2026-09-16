@@ -21,7 +21,7 @@ use crossterm::{event, terminal as crossterm_terminal};
 
 use crate::{
     args::seed_from_args,
-    config::TARGET_FPS,
+    config::{MIN_HEIGHT, MIN_WIDTH, TARGET_FPS},
     game::Game,
     input::{Command, InputState},
     renderer::render_frame,
@@ -63,8 +63,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             }
         }
 
-        game.update(input.movement(frame_start), delta_seconds);
         let (width, height) = crossterm_terminal::size()?;
+        if width >= MIN_WIDTH && height >= MIN_HEIGHT {
+            game.update(input.movement(frame_start), delta_seconds);
+        }
         let frame = render_frame(&game, usize::from(width), usize::from(height));
         terminal.draw(&frame.to_terminal_string())?;
 
