@@ -3,6 +3,7 @@ use crate::{
     game::{Game, GameState},
     raycaster::{WallSide, cast_view},
 };
+use std::f32::consts::PI;
 
 pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
     if width < usize::from(MIN_WIDTH) || height < usize::from(MIN_HEIGHT) {
@@ -137,7 +138,7 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
         game.config.render_distance,
     );
 
-    for (x, ray) in rays.into_iter().enumerate() {
+    for (x, ray) in rays.iter().enumerate() {
         let wall_height = (height as f32 / ray.perpendicular_distance) as usize;
         let top = height.saturating_sub(wall_height) / 2;
         let bottom = (top + wall_height).min(height);
@@ -146,7 +147,50 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
             frame.set(x, y, shade);
         }
     }
+    render_monster(&mut frame, game, &rays);
     frame
+}
+
+fn render_monster(frame: &mut FrameBuffer, game: &Game, wall_depth: &[crate::raycaster::ViewRay]) {
+    let relative = game.monster.position - game.player.position;
+    let raw_angle = relative.y.atan2(relative.x) - game.player.angle;
+    let angle = (raw_angle + PI).rem_euclid(2.0 * PI) - PI;
+    if angle.abs() > game.config.fov * 0.57 {
+        return;
+    }
+    let distance = relative.length();
+    let depth = distance * angle.cos();
+    let center_x = ((angle / game.config.fov + 0.5) * frame.width as f32) as isize;
+    let size = ((frame.height as f32 / depth.max(0.8)) * 0.42).clamp(2.0, frame.height as f32 * 0.8)
+        as isize;
+    let center_y = frame.height as isize / 2;
+    for y in -size..=size {
+        for x in -size..=size {
+            let screen_x = center_x + x;
+            let screen_y = center_y + y;
+            if screen_x < 0
+                || screen_y < 0
+                || screen_x >= frame.width as isize
+                || screen_y >= frame.height as isize
+            {
+                continue;
+            }
+            let column = screen_x as usize;
+            if depth >= wall_depth[column].perpendicular_distance {
+                continue;
+            }
+            let character = if y.abs() < size / 3 && x.abs() < size / 3 {
+                '@'
+            } else if y > 0 && x.abs() < size / 5 {
+                '|'
+            } else if y > size / 3 && x.abs() > size / 3 {
+                '/'
+            } else {
+                continue;
+            };
+            frame.set(column, screen_y as usize, character);
+        }
+    }
 }
 
 fn render_floor_and_ceiling(frame: &mut FrameBuffer) {
@@ -282,5 +326,20 @@ mod tests {
         let output = render_frame(&game, 60, 18).to_terminal_string();
         assert!(output.contains("Terminal too small."));
         assert!(output.contains("80x24"));
+    }
+
+    #[test]
+    fn monster_sprite_is_drawn_in_clear_view() {
+        let mut game = Game::new(3);
+        game.map =
+            crate::map::Map::from_ascii(&["#######", "#.....#", "#.....#", "#######"]).unwrap();
+        game.player.position = crate::geom::Vec2::new(2.5, 2.5);
+        game.player.angle = 0.0;
+        game.monster.position = crate::geom::Vec2::new(4.5, 2.5);
+        assert!(
+            render_world(&game, 80, 24)
+                .to_terminal_string()
+                .contains('@')
+        );
     }
 }
