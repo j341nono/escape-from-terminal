@@ -305,4 +305,62 @@ mod tests {
         assert_eq!(monster.position, Cell::new(2, 1).center());
         assert_eq!(monster.path_index, 2);
     }
+
+    #[test]
+    fn lost_chase_preserves_last_visible_position() {
+        let mut map = Map::from_ascii(&["#######", "#..#..#", "#..#..#", "#######"]).unwrap();
+        let mut monster = Monster::new(Cell::new(2, 1));
+        monster.state = AiState::Chasing;
+        monster.last_known = Some(Cell::new(2, 2));
+        monster.search_timer = 7.0;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(5);
+        let _ = monster.update(
+            &mut map,
+            Vec2::new(4.5, 1.5),
+            0.0,
+            0.1,
+            &GameConfig::default(),
+            &mut rng,
+        );
+        assert_eq!(monster.state, AiState::Searching);
+        assert_eq!(monster.last_known, Some(Cell::new(2, 2)));
+    }
+
+    #[test]
+    fn searching_times_out_to_wandering() {
+        let mut map = Map::from_ascii(&["#######", "#..#..#", "#..#..#", "#######"]).unwrap();
+        let mut monster = Monster::new(Cell::new(2, 1));
+        monster.state = AiState::Searching;
+        monster.last_known = Some(Cell::new(2, 2));
+        monster.search_timer = 0.05;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(8);
+        let _ = monster.update(
+            &mut map,
+            Vec2::new(4.5, 1.5),
+            0.0,
+            0.1,
+            &GameConfig::default(),
+            &mut rng,
+        );
+        assert_eq!(monster.state, AiState::Wandering);
+    }
+
+    #[test]
+    fn unreachable_suspicious_target_is_safe() {
+        let mut map = Map::from_ascii(&["#######", "#..#..#", "#..#..#", "#######"]).unwrap();
+        let mut monster = Monster::new(Cell::new(1, 1));
+        monster.state = AiState::Suspicious;
+        monster.last_known = Some(Cell::new(5, 1));
+        let mut rng = rand::rngs::StdRng::seed_from_u64(13);
+        let _ = monster.update(
+            &mut map,
+            Vec2::new(5.5, 1.5),
+            0.0,
+            0.1,
+            &GameConfig::default(),
+            &mut rng,
+        );
+        assert!(monster.path.is_empty());
+        assert_eq!(monster.state, AiState::Suspicious);
+    }
 }
