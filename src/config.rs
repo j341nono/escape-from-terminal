@@ -43,3 +43,17 @@ impl Default for GameConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chase_speed_preserves_escape_window() {
+        let config = GameConfig::default();
+        assert!(config.walk_speed < config.monster_chase_speed);
+        assert!(config.monster_chase_speed < config.sprint_speed);
+        assert!(config.stamina_seconds >= 5.0);
+        assert!(config.stamina_recovery < 1.0);
+    }
+}
