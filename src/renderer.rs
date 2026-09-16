@@ -210,7 +210,7 @@ fn apply_proximity_glitch(frame: &mut FrameBuffer, game: &Game) {
         frame.set(0, y, if index % 2 == 0 { '%' } else { '?' });
         frame.set(frame.width.saturating_sub(1), (y + 5) % frame.height, '#');
     }
-    if distance < 4.0 && phase % 47 == 0 {
+    if distance < 4.0 && phase.is_multiple_of(47) {
         frame.write_centered(2, "SIGNAL: NULL");
     }
 }
