@@ -4,6 +4,7 @@ mod geom;
 mod input;
 mod level;
 mod map;
+mod pathfinding;
 mod player;
 mod raycaster;
 mod renderer;
