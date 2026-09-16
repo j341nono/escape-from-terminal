@@ -10,6 +10,8 @@ pub enum Command {
     Confirm,
     TogglePause,
     Interact,
+    Retry,
+    NewFacility,
     Quit,
 }
 
@@ -51,6 +53,8 @@ impl InputState {
             KeyCode::Enter if active => return Command::Confirm,
             KeyCode::Esc if active => return Command::TogglePause,
             KeyCode::Char('e' | 'E') if active => return Command::Interact,
+            KeyCode::Char('r' | 'R') if active => return Command::Retry,
+            KeyCode::Char('n' | 'N') if active => return Command::NewFacility,
             KeyCode::Char('q' | 'Q') if active => return Command::Quit,
             _ => {}
         }

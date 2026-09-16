@@ -16,6 +16,7 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
     }
     match game.state {
         GameState::Title => render_title(width, height),
+        GameState::Intro => render_intro(width, height),
         GameState::Playing => {
             let mut frame = render_world(game, width, height);
             frame.write_at(
@@ -33,8 +34,63 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
             frame.write_centered(middle + 2, "Q            QUIT");
             frame
         }
+        GameState::Caught => render_caught(width, height),
+        GameState::Escaped => render_escaped(game, width, height),
         GameState::Exiting => FrameBuffer::new(width, height, ' '),
     }
+}
+
+fn render_intro(width: usize, height: usize) -> FrameBuffer {
+    let mut frame = FrameBuffer::new(width, height, ' ');
+    let middle = height / 2;
+    frame.write_centered(middle.saturating_sub(3), "02:17 AM");
+    frame.write_centered(middle.saturating_sub(1), "SECTOR STATUS: NULL");
+    frame.write_centered(middle + 1, "Emergency power is offline.");
+    frame.write_centered(middle + 2, "Something is moving in the facility.");
+    frame.write_centered(middle + 5, "ENTER  CONTINUE");
+    frame
+}
+
+fn render_caught(width: usize, height: usize) -> FrameBuffer {
+    let mut frame = FrameBuffer::new(width, height, ' ');
+    let middle = height / 2;
+    for (offset, line) in [
+        "      /\\___/\\",
+        "     (  o o  )",
+        "     /   ^   \\",
+        "    /|  ---  |\\",
+    ]
+    .iter()
+    .enumerate()
+    {
+        frame.write_centered(middle.saturating_sub(6) + offset, line);
+    }
+    frame.write_centered(middle, "YOU WERE FOUND");
+    frame.write_centered(middle + 3, "R  RETRY SAME FACILITY");
+    frame.write_centered(middle + 4, "N  NEW FACILITY");
+    frame.write_centered(middle + 5, "Q  QUIT");
+    frame
+}
+
+fn render_escaped(game: &Game, width: usize, height: usize) -> FrameBuffer {
+    let mut frame = FrameBuffer::new(width, height, ' ');
+    let middle = height / 2;
+    frame.write_centered(middle.saturating_sub(3), "///  SIGNAL RESTORED  ///");
+    frame.write_centered(middle, "YOU ESCAPED");
+    frame.write_centered(
+        middle + 2,
+        &format!(
+            "TIME: {:02}:{:02}",
+            (game.elapsed_seconds / 60.0) as u32,
+            game.elapsed_seconds as u32 % 60
+        ),
+    );
+    frame.write_centered(middle + 3, &format!("CHASES: {}", game.chase_count));
+    frame.write_centered(
+        middle + 6,
+        "R  RETRY SAME FACILITY   N  NEW FACILITY   Q  QUIT",
+    );
+    frame
 }
 
 fn render_title(width: usize, height: usize) -> FrameBuffer {

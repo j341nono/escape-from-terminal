@@ -1,3 +1,4 @@
+use crate::monster::Monster;
 use crate::{
     config::GameConfig,
     generator::generate,
@@ -5,12 +6,16 @@ use crate::{
     map::Map,
     player::Player,
 };
+use rand::{Rng, SeedableRng, rngs::StdRng};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
     Title,
+    Intro,
     Playing,
     Paused,
+    Caught,
+    Escaped,
     Exiting,
 }
 
@@ -23,6 +28,13 @@ pub struct Game {
     pub objective_cell: crate::geom::Cell,
     pub exit_cell: crate::geom::Cell,
     pub monster_spawn: crate::geom::Cell,
+    pub monster: Monster,
+    pub stamina: f32,
+    pub power_restored: bool,
+    pub elapsed_seconds: f32,
+    pub chase_count: u32,
+    pub caught_flash: f32,
+    rng: StdRng,
 }
 
 impl Game {
@@ -37,19 +49,41 @@ impl Game {
             objective_cell: facility.objective,
             exit_cell: facility.exit,
             monster_spawn: facility.monster_spawn,
+            monster: Monster::new(facility.monster_spawn),
+            stamina: GameConfig::default().stamina_seconds,
+            power_restored: false,
+            elapsed_seconds: 0.0,
+            chase_count: 0,
+            caught_flash: 0.0,
+            rng: StdRng::seed_from_u64(seed ^ 0x4e55_4c4c),
         }
     }
 
     pub fn handle_command(&mut self, command: Command) {
+        if command == Command::Retry && matches!(self.state, GameState::Caught | GameState::Escaped)
+        {
+            *self = Self::new(self.seed);
+            self.state = GameState::Playing;
+            return;
+        }
+        if command == Command::NewFacility
+            && matches!(self.state, GameState::Caught | GameState::Escaped)
+        {
+            let seed = self.rng.random();
+            *self = Self::new(seed);
+            self.state = GameState::Playing;
+            return;
+        }
         self.state = match (self.state, command) {
             (_, Command::Quit) => GameState::Exiting,
-            (GameState::Title, Command::Confirm) => GameState::Playing,
+            (GameState::Title, Command::Confirm) => GameState::Intro,
+            (GameState::Intro, Command::Confirm) => GameState::Playing,
             (GameState::Playing, Command::TogglePause) => GameState::Paused,
             (GameState::Paused, Command::TogglePause | Command::Confirm) => GameState::Playing,
             (state, _) => state,
         };
         if command == Command::Interact && self.state == GameState::Playing {
-            self.interact_door();
+            self.interact();
         }
     }
 
@@ -63,12 +97,66 @@ impl Game {
         }
 
         let delta_seconds = delta_seconds.clamp(0.0, 0.1);
+        self.elapsed_seconds += delta_seconds;
         self.player
             .rotate(input.turn, self.config.rotation_speed, delta_seconds);
-        let displacement =
-            self.player.movement_direction(input) * (self.config.walk_speed * delta_seconds);
+        let moving = input.forward != 0.0 || input.strafe != 0.0;
+        let sprinting = input.sprint && moving && self.stamina > 0.0;
+        if sprinting {
+            self.stamina = (self.stamina - delta_seconds).max(0.0);
+        } else {
+            self.stamina = (self.stamina + self.config.stamina_recovery * delta_seconds)
+                .min(self.config.stamina_seconds);
+        }
+        let displacement = self.player.movement_direction(input)
+            * ((if sprinting {
+                self.config.sprint_speed
+            } else {
+                self.config.walk_speed
+            }) * delta_seconds);
         self.player
             .move_with_collision(&self.map, displacement, self.config.player_radius);
+        let noise = if sprinting {
+            1.0
+        } else if moving {
+            0.42
+        } else {
+            0.0
+        };
+        let report = self.monster.update(
+            &mut self.map,
+            self.player.position,
+            noise,
+            delta_seconds,
+            &self.config,
+            &mut self.rng,
+        );
+        if report.spotted {
+            self.chase_count += 1;
+            self.caught_flash = 0.9;
+        }
+        self.caught_flash = (self.caught_flash - delta_seconds).max(0.0);
+        if report.caught {
+            self.state = GameState::Caught;
+        }
+    }
+
+    fn interact(&mut self) {
+        let cell = crate::geom::Cell::new(
+            self.player.position.x as usize,
+            self.player.position.y as usize,
+        );
+        if cell.x.abs_diff(self.objective_cell.x) + cell.y.abs_diff(self.objective_cell.y) <= 1 {
+            self.power_restored = true;
+            return;
+        }
+        if self.power_restored
+            && cell.x.abs_diff(self.exit_cell.x) + cell.y.abs_diff(self.exit_cell.y) <= 1
+        {
+            self.state = GameState::Escaped;
+            return;
+        }
+        self.interact_door();
     }
 
     fn interact_door(&mut self) {
@@ -101,6 +189,14 @@ impl Game {
             self.map.toggle_door(door);
         }
     }
+
+    pub fn objective_text(&self) -> &'static str {
+        if self.power_restored {
+            "REACH EMERGENCY EXIT"
+        } else {
+            "RESTORE EMERGENCY POWER"
+        }
+    }
 }
 
 #[cfg(test)]
@@ -110,6 +206,8 @@ mod tests {
     #[test]
     fn transitions_between_foundation_states() {
         let mut game = Game::new(1);
+        game.handle_command(Command::Confirm);
+        assert_eq!(game.state, GameState::Intro);
         game.handle_command(Command::Confirm);
         assert_eq!(game.state, GameState::Playing);
         game.handle_command(Command::TogglePause);
@@ -131,6 +229,7 @@ mod tests {
         game.update(input, 0.1);
         assert_eq!(game.player.position, start);
         game.handle_command(Command::Confirm);
+        game.handle_command(Command::Confirm);
         game.update(input, 0.1);
         assert!(game.player.position.x > start.x);
     }
@@ -146,5 +245,17 @@ mod tests {
             game.map.tile(crate::geom::Cell::new(2, 1)),
             crate::map::Tile::DoorOpen
         );
+    }
+
+    #[test]
+    fn power_then_exit_completes_run() {
+        let mut game = Game::new(7);
+        game.state = GameState::Playing;
+        game.player.position = game.objective_cell.center();
+        game.handle_command(Command::Interact);
+        assert!(game.power_restored);
+        game.player.position = game.exit_cell.center();
+        game.handle_command(Command::Interact);
+        assert_eq!(game.state, GameState::Escaped);
     }
 }
