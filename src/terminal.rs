@@ -21,6 +21,7 @@ impl TerminalSession {
         enable_raw_mode()?;
         let mut output = stdout();
         if let Err(error) = execute!(output, EnterAlternateScreen, Hide, Clear(ClearType::All)) {
+            let _ = execute!(output, Show, LeaveAlternateScreen);
             let _ = disable_raw_mode();
             return Err(error);
         }
