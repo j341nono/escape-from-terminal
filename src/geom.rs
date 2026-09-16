@@ -70,6 +70,10 @@ impl Cell {
     pub const fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
+
+    pub fn center(self) -> Vec2 {
+        Vec2::new(self.x as f32 + 0.5, self.y as f32 + 0.5)
+    }
 }
 
 #[cfg(test)]

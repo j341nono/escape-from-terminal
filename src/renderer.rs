@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn projects_wall_columns_into_the_viewport() {
-        let mut game = Game::new().expect("game should initialize");
+        let mut game = Game::new(1);
         game.player.position = crate::geom::Vec2::new(3.5, 2.5);
         game.player.angle = 0.0;
         let output = render_world(&game, 20, 10).to_terminal_string();
@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn title_uses_canonical_game_name_art() {
-        let game = Game::new().expect("game should initialize");
+        let game = Game::new(1);
         let title = render_frame(&game, 80, 24).to_terminal_string();
         assert!(title.contains("NO RECORD OF THIS FACILITY EXISTS."));
         assert!(title.contains(GAME_NAME));
@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn small_terminals_receive_resize_instructions() {
-        let game = Game::new().expect("game should initialize");
+        let game = Game::new(1);
         let output = render_frame(&game, 60, 18).to_terminal_string();
         assert!(output.contains("Terminal too small."));
         assert!(output.contains("80x24"));

@@ -1,7 +1,7 @@
 use crate::{
     config::GameConfig,
+    generator::generate,
     input::{Command, MovementInput},
-    level::training_sector,
     map::Map,
     player::Player,
 };
@@ -19,17 +19,25 @@ pub struct Game {
     pub map: Map,
     pub player: Player,
     pub config: GameConfig,
+    pub seed: u64,
+    pub objective_cell: crate::geom::Cell,
+    pub exit_cell: crate::geom::Cell,
+    pub monster_spawn: crate::geom::Cell,
 }
 
 impl Game {
-    pub fn new() -> Result<Self, String> {
-        let level = training_sector()?;
-        Ok(Self {
+    pub fn new(seed: u64) -> Self {
+        let facility = generate(seed);
+        Self {
             state: GameState::Title,
-            player: Player::new(level.player_start, level.player_angle),
-            map: level.map,
+            player: Player::new(facility.start.center(), 0.0),
+            map: facility.map,
             config: GameConfig::default(),
-        })
+            seed,
+            objective_cell: facility.objective,
+            exit_cell: facility.exit,
+            monster_spawn: facility.monster_spawn,
+        }
     }
 
     pub fn handle_command(&mut self, command: Command) {
@@ -67,7 +75,7 @@ mod tests {
 
     #[test]
     fn transitions_between_foundation_states() {
-        let mut game = Game::new().expect("game should initialize");
+        let mut game = Game::new(1);
         game.handle_command(Command::Confirm);
         assert_eq!(game.state, GameState::Playing);
         game.handle_command(Command::TogglePause);
@@ -80,7 +88,7 @@ mod tests {
 
     #[test]
     fn movement_updates_only_while_playing() {
-        let mut game = Game::new().expect("game should initialize");
+        let mut game = Game::new(1);
         let start = game.player.position;
         let input = MovementInput {
             forward: 1.0,

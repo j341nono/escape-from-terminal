@@ -3,7 +3,6 @@ mod game;
 mod generator;
 mod geom;
 mod input;
-mod level;
 mod map;
 mod pathfinding;
 mod player;
@@ -20,8 +19,8 @@ use std::{
 use crossterm::{event, terminal as crossterm_terminal};
 
 use crate::{
-    config::TARGET_FPS, game::Game, input::InputState, renderer::render_frame,
-    terminal::TerminalSession,
+    args::seed_from_args, config::TARGET_FPS, game::Game, input::InputState,
+    renderer::render_frame, terminal::TerminalSession,
 };
 
 fn main() {
@@ -32,7 +31,10 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
-    let mut game = Game::new().map_err(io::Error::other)?;
+    let seed = seed_from_args(std::env::args())
+        .map_err(io::Error::other)?
+        .unwrap_or_else(rand::random);
+    let mut game = Game::new(seed);
     let mut terminal = TerminalSession::enter()?;
     let mut previous_frame = Instant::now();
     let mut input = InputState::new(previous_frame);
@@ -61,3 +63,4 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
+mod args;
