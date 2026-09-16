@@ -168,18 +168,25 @@ impl Monster {
         self.door_timer = 0.0;
         let target = next.center();
         let offset = target - self.position;
-        if offset.length() < 0.12 {
-            self.path_index += 1;
-            return;
-        }
-        let direction = offset.normalized();
-        self.heading = direction.y.atan2(direction.x);
         let speed = if self.state == AiState::Chasing {
             config.monster_chase_speed
         } else {
             config.monster_wander_speed
         };
-        let next_position = self.position + direction * (speed * delta);
+        let distance = offset.length();
+        let step = speed * delta;
+        let direction = offset.normalized();
+        if distance > f32::EPSILON {
+            self.heading = direction.y.atan2(direction.x);
+        }
+        if distance <= step.max(0.12) {
+            if map.is_walkable_position(target, config.player_radius) {
+                self.position = target;
+                self.path_index += 1;
+            }
+            return;
+        }
+        let next_position = self.position + direction * step;
         if map.is_walkable_position(next_position, config.player_radius) {
             self.position = next_position;
         }
@@ -283,5 +290,19 @@ mod tests {
         let config = GameConfig::default();
         assert!(!monster.can_hear(Cell::new(5, 1), player, 0.42, &map, &config));
         assert!(monster.can_hear(Cell::new(5, 1), player, 1.0, &map, &config));
+    }
+
+    #[test]
+    fn movement_clamps_to_waypoint_without_oscillation() {
+        let mut map = Map::from_ascii(&["#####", "#...#", "#####"]).unwrap();
+        let mut monster = Monster::new(Cell::new(1, 1));
+        monster.state = AiState::Chasing;
+        monster.path = vec![Cell::new(1, 1), Cell::new(2, 1)];
+        monster.path_index = 1;
+        for _ in 0..4 {
+            monster.follow_path(&mut map, 0.1, &GameConfig::default());
+        }
+        assert_eq!(monster.position, Cell::new(2, 1).center());
+        assert_eq!(monster.path_index, 2);
     }
 }
