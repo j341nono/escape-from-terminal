@@ -80,8 +80,14 @@ mod tests {
     fn maps_movement_and_rotation_keys() {
         let now = Instant::now();
         let mut input = InputState::new(now);
-        input.handle_key(KeyEvent::new(KeyCode::Char('w'), crossterm::event::KeyModifiers::NONE), now);
-        input.handle_key(KeyEvent::new(KeyCode::Left, crossterm::event::KeyModifiers::NONE), now);
+        input.handle_key(
+            KeyEvent::new(KeyCode::Char('w'), crossterm::event::KeyModifiers::NONE),
+            now,
+        );
+        input.handle_key(
+            KeyEvent::new(KeyCode::Left, crossterm::event::KeyModifiers::NONE),
+            now,
+        );
         let movement = input.movement(now);
         assert_eq!(movement.forward, 1.0);
         assert_eq!(movement.turn, -1.0);
@@ -91,8 +97,14 @@ mod tests {
     fn opposite_keys_cancel_each_other() {
         let now = Instant::now();
         let mut input = InputState::new(now);
-        input.handle_key(KeyEvent::new(KeyCode::Char('a'), crossterm::event::KeyModifiers::NONE), now);
-        input.handle_key(KeyEvent::new(KeyCode::Char('d'), crossterm::event::KeyModifiers::NONE), now);
+        input.handle_key(
+            KeyEvent::new(KeyCode::Char('a'), crossterm::event::KeyModifiers::NONE),
+            now,
+        );
+        input.handle_key(
+            KeyEvent::new(KeyCode::Char('d'), crossterm::event::KeyModifiers::NONE),
+            now,
+        );
         assert_eq!(input.movement(now).strafe, 0.0);
     }
 }

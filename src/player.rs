@@ -52,7 +52,6 @@ mod tests {
         assert!(player.forward().dot(player.right()).abs() < 0.0001);
     }
 
-
     #[test]
     fn diagonal_movement_is_normalized() {
         let player = Player::new(Vec2::new(1.0, 1.0), 0.0);
@@ -71,11 +70,10 @@ mod tests {
         assert!(player.angle > 0.0 && player.angle < TAU);
     }
 
-
     #[test]
     fn collision_prevents_wall_entry_and_allows_sliding() {
-        let map = Map::from_ascii(&["#####", "#.#.#", "#...#", "#...#", "#####"])
-            .expect("valid map");
+        let map =
+            Map::from_ascii(&["#####", "#.#.#", "#...#", "#...#", "#####"]).expect("valid map");
         let mut player = Player::new(Vec2::new(1.5, 1.5), 0.0);
         player.move_with_collision(&map, Vec2::new(0.8, 0.6), 0.2);
         assert_eq!(player.position.x, 1.5);

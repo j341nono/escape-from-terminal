@@ -5,6 +5,32 @@ pub struct FrameBuffer {
     cells: Vec<char>,
 }
 
+pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
+    let mut frame = FrameBuffer::new(width, height, ' ');
+    if width == 0 || height == 0 {
+        return frame;
+    }
+
+    let rays = cast_view(
+        &game.map,
+        game.player.position,
+        game.player.angle,
+        game.config.fov,
+        width,
+        game.config.render_distance,
+    );
+
+    for (x, ray) in rays.into_iter().enumerate() {
+        let wall_height = (height as f32 / ray.perpendicular_distance) as usize;
+        let top = height.saturating_sub(wall_height) / 2;
+        let bottom = (top + wall_height).min(height);
+        for y in top..bottom {
+            frame.set(x, y, '█');
+        }
+    }
+    frame
+}
+
 impl FrameBuffer {
     pub fn new(width: usize, height: usize, fill: char) -> Self {
         Self {
@@ -58,4 +84,15 @@ mod tests {
         frame.write_centered(0, "HUD");
         assert_eq!(frame.to_terminal_string(), ".HUD.\r\n.....");
     }
+
+    #[test]
+    fn projects_wall_columns_into_the_viewport() {
+        let mut game = Game::new().expect("game should initialize");
+        game.player.position = crate::geom::Vec2::new(3.5, 2.5);
+        game.player.angle = 0.0;
+        let output = render_world(&game, 20, 10).to_terminal_string();
+        assert!(output.contains('█'));
+        assert_eq!(output.lines().count(), 10);
+    }
 }
+use crate::{game::Game, raycaster::cast_view};

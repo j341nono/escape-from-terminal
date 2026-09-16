@@ -54,8 +54,8 @@ impl Game {
         let delta_seconds = delta_seconds.clamp(0.0, 0.1);
         self.player
             .rotate(input.turn, self.config.rotation_speed, delta_seconds);
-        let displacement = self.player.movement_direction(input)
-            * (self.config.walk_speed * delta_seconds);
+        let displacement =
+            self.player.movement_direction(input) * (self.config.walk_speed * delta_seconds);
         self.player
             .move_with_collision(&self.map, displacement, self.config.player_radius);
     }
@@ -77,7 +77,6 @@ mod tests {
         game.handle_command(Command::Quit);
         assert!(!game.is_running());
     }
-
 
     #[test]
     fn movement_updates_only_while_playing() {

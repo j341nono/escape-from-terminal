@@ -94,7 +94,10 @@ pub fn cast_ray(map: &Map, origin: Vec2, direction: Vec2, max_distance: f32) -> 
             };
         }
 
-        if map.tile(Cell::new(map_x as usize, map_y as usize)).blocks_sight() {
+        if map
+            .tile(Cell::new(map_x as usize, map_y as usize))
+            .blocks_sight()
+        {
             return RayHit { distance, side };
         }
     }
@@ -110,28 +113,17 @@ mod tests {
 
     #[test]
     fn dda_hits_vertical_wall_at_expected_distance() {
-        let hit = cast_ray(
-            &box_map(),
-            Vec2::new(2.5, 2.5),
-            Vec2::new(1.0, 0.0),
-            20.0,
-        );
+        let hit = cast_ray(&box_map(), Vec2::new(2.5, 2.5), Vec2::new(1.0, 0.0), 20.0);
         assert!((hit.distance - 1.5).abs() < 0.0001);
         assert_eq!(hit.side, WallSide::Vertical);
     }
 
     #[test]
     fn dda_hits_horizontal_wall_at_expected_distance() {
-        let hit = cast_ray(
-            &box_map(),
-            Vec2::new(2.5, 2.5),
-            Vec2::new(0.0, -1.0),
-            20.0,
-        );
+        let hit = cast_ray(&box_map(), Vec2::new(2.5, 2.5), Vec2::new(0.0, -1.0), 20.0);
         assert!((hit.distance - 1.5).abs() < 0.0001);
         assert_eq!(hit.side, WallSide::Horizontal);
     }
-
 
     #[test]
     fn view_distances_are_fisheye_corrected() {
