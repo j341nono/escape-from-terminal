@@ -1,9 +1,9 @@
-use crate::monster::Monster;
 use crate::{
     config::GameConfig,
     generator::generate,
     input::{Command, MovementInput},
     map::Map,
+    monster::Monster,
     player::Player,
 };
 use rand::{Rng, SeedableRng, rngs::StdRng};
@@ -43,16 +43,18 @@ pub struct Game {
 impl Game {
     pub fn new(seed: u64) -> Self {
         let facility = generate(seed);
+        let config = GameConfig::default();
+        let stamina = config.stamina_seconds;
         Self {
             state: GameState::Title,
             player: Player::new(facility.start.center(), 0.0),
             map: facility.map,
-            config: GameConfig::default(),
+            config,
             seed,
             objective_cell: facility.objective,
             exit_cell: facility.exit,
             monster: Monster::new(facility.monster_spawn),
-            stamina: GameConfig::default().stamina_seconds,
+            stamina,
             sprint_exhausted: false,
             power_restored: false,
             elapsed_seconds: 0.0,

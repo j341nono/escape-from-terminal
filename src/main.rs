@@ -1,3 +1,4 @@
+mod args;
 mod config;
 mod game;
 mod generator;
@@ -76,4 +77,3 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
-mod args;
