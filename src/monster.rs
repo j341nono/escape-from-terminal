@@ -6,7 +6,7 @@ use crate::{
     config::GameConfig,
     geom::{Cell, Vec2},
     map::{Map, Tile},
-    pathfinding::shortest_path,
+    pathfinding::{path_distance, shortest_path},
 };
 
 pub const MONSTER_NAME: &str = "SPECIMEN-NULL";
@@ -89,9 +89,8 @@ impl Monster {
             self.search_timer = 7.0;
         } else if self.state == AiState::Chasing {
             self.state = AiState::Searching;
-        } else if self.state == AiState::Wandering
-            && noise > 0.0
-            && self.position.distance(player) < config.monster_hearing_range * noise
+        } else if self.state != AiState::Chasing
+            && self.can_hear(player_cell, player, noise, map, config)
         {
             self.state = AiState::Suspicious;
             self.last_known = Some(player_cell);
@@ -134,6 +133,22 @@ impl Monster {
         }
         report.caught = self.position.distance(player) < 0.52;
         report
+    }
+
+    fn can_hear(
+        &self,
+        player_cell: Cell,
+        player: Vec2,
+        noise: f32,
+        map: &Map,
+        config: &GameConfig,
+    ) -> bool {
+        let range = config.monster_hearing_range * noise;
+        if range <= 0.0 || self.position.distance(player) > range {
+            return false;
+        }
+        path_distance(map, self.cell(), player_cell, true)
+            .is_some_and(|distance| distance as f32 <= range)
     }
 
     fn follow_path(&mut self, map: &mut Map, delta: f32, config: &GameConfig) {
@@ -251,5 +266,22 @@ mod tests {
             );
         }
         assert_eq!(map.tile(Cell::new(2, 1)), Tile::DoorOpen);
+    }
+
+    #[test]
+    fn walls_attenuate_quiet_footsteps() {
+        let map = Map::from_ascii(&[
+            "#########",
+            "#...#...#",
+            "#...#...#",
+            "#.......#",
+            "#########",
+        ])
+        .unwrap();
+        let monster = Monster::new(Cell::new(3, 1));
+        let player = Vec2::new(5.5, 1.5);
+        let config = GameConfig::default();
+        assert!(!monster.can_hear(Cell::new(5, 1), player, 0.42, &map, &config));
+        assert!(monster.can_hear(Cell::new(5, 1), player, 1.0, &map, &config));
     }
 }
