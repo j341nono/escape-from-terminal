@@ -81,7 +81,6 @@ impl Monster {
     ) -> MonsterReport {
         let mut report = MonsterReport::default();
         self.repath_timer -= delta;
-        self.door_timer = (self.door_timer - delta).max(0.0);
         let player_cell = Cell::new(player.x as usize, player.y as usize);
         if self.can_see(player, map, config) {
             report.spotted = self.state != AiState::Chasing;
@@ -139,6 +138,7 @@ impl Monster {
 
     fn follow_path(&mut self, map: &mut Map, delta: f32, config: &GameConfig) {
         let Some(next) = self.path.get(self.path_index).copied() else {
+            self.door_timer = 0.0;
             return;
         };
         if map.tile(next) == Tile::DoorClosed {
@@ -150,6 +150,7 @@ impl Monster {
                 return;
             }
         }
+        self.door_timer = 0.0;
         let target = next.center();
         let offset = target - self.position;
         if offset.length() < 0.12 {
@@ -229,5 +230,26 @@ mod tests {
         );
         assert!(report.spotted);
         assert_eq!(monster.state, AiState::Chasing);
+    }
+
+    #[test]
+    fn monster_opens_blocking_door_after_delay() {
+        let mut map = Map::from_ascii(&["#######", "#.D...#", "#######"]).unwrap();
+        let mut monster = Monster::new(Cell::new(1, 1));
+        monster.state = AiState::Chasing;
+        monster.last_known = Some(Cell::new(5, 1));
+        monster.search_timer = 7.0;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(2);
+        for _ in 0..14 {
+            let _ = monster.update(
+                &mut map,
+                Vec2::new(5.5, 1.5),
+                0.0,
+                0.1,
+                &GameConfig::default(),
+                &mut rng,
+            );
+        }
+        assert_eq!(map.tile(Cell::new(2, 1)), Tile::DoorOpen);
     }
 }
