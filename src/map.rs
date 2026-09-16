@@ -34,6 +34,7 @@ impl Map {
         }
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn from_ascii(rows: &[&str]) -> Result<Self, String> {
         let height = rows.len();
         let width = rows.first().map_or(0, |row| row.chars().count());
@@ -61,6 +62,7 @@ impl Map {
         Ok(map)
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     fn validate_enclosed(&self) -> Result<(), String> {
         let horizontal = (0..self.width()).all(|x| {
             self.tile(Cell::new(x, 0)) == Tile::Wall
