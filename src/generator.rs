@@ -92,8 +92,8 @@ fn generate_attempt(seed: u64, rng: &mut StdRng) -> Option<Facility> {
     let start = rooms[0].center();
     let objective = farthest(&map, start, &rooms)?;
     let exit = farthest(&map, objective, &rooms)?;
-    let monster_spawn = farthest(&map, start, &rooms)?;
-    if objective == exit || monster_spawn == start || monster_spawn == exit {
+    let monster_spawn = choose_monster_spawn(&map, start, objective, exit, &rooms)?;
+    if objective == exit {
         return None;
     }
     let first_leg = path_distance(&map, start, objective, false)?;
@@ -115,6 +115,28 @@ fn generate_attempt(seed: u64, rng: &mut StdRng) -> Option<Facility> {
         monster_spawn,
         seed,
     })
+}
+
+fn choose_monster_spawn(
+    map: &Map,
+    start: Cell,
+    objective: Cell,
+    exit: Cell,
+    rooms: &[Room],
+) -> Option<Cell> {
+    rooms
+        .iter()
+        .map(|room| room.center())
+        .filter(|cell| ![start, objective, exit].contains(cell))
+        .filter_map(|cell| {
+            let from_start = path_distance(map, start, cell, false)?;
+            let from_objective = path_distance(map, objective, cell, false)?;
+            let from_exit = path_distance(map, exit, cell, false)?;
+            (from_start >= 18 && from_objective >= 10 && from_exit >= 10)
+                .then_some((from_start + 2 * from_objective.min(from_exit), cell))
+        })
+        .max_by_key(|pair| pair.0)
+        .map(|pair| pair.1)
 }
 
 fn carve_room(map: &mut Map, room: Room) {
@@ -193,14 +215,35 @@ mod tests {
         assert_eq!(generate(1234), generate(1234));
     }
     #[test]
-    fn generated_facilities_have_required_routes() {
-        for seed in 0..20 {
+    fn generated_facilities_satisfy_seed_corpus_invariants() {
+        for seed in 0..256 {
             let facility = generate(seed);
+            assert!(facility.map.is_walkable(facility.start), "seed {seed}");
+            assert!(facility.map.is_walkable(facility.objective), "seed {seed}");
+            assert!(facility.map.is_walkable(facility.exit), "seed {seed}");
             assert!(
-                path_distance(&facility.map, facility.start, facility.objective, true).is_some()
+                facility.map.is_walkable(facility.monster_spawn),
+                "seed {seed}"
             );
             assert!(
-                path_distance(&facility.map, facility.objective, facility.exit, true).is_some()
+                path_distance(&facility.map, facility.start, facility.objective, true)
+                    .is_some_and(|distance| distance >= 22),
+                "seed {seed}"
+            );
+            assert!(
+                path_distance(&facility.map, facility.objective, facility.exit, true)
+                    .is_some_and(|distance| distance >= 22),
+                "seed {seed}"
+            );
+            assert!(
+                path_distance(&facility.map, facility.start, facility.monster_spawn, true)
+                    .is_some_and(|distance| distance >= 18),
+                "seed {seed}"
+            );
+            assert!(
+                ![facility.start, facility.objective, facility.exit]
+                    .contains(&facility.monster_spawn),
+                "seed {seed}"
             );
         }
     }
