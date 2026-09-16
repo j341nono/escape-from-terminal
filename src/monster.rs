@@ -202,6 +202,7 @@ pub fn line_of_sight(map: &Map, from: Vec2, to: Vec2) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
     #[test]
     fn walls_block_monster_line_of_sight() {
         let map = Map::from_ascii(&["#####", "#.#.#", "#####"]).unwrap();
@@ -210,5 +211,23 @@ mod tests {
             Vec2::new(1.5, 1.5),
             Vec2::new(3.5, 1.5)
         ));
+    }
+
+    #[test]
+    fn visible_player_triggers_chase() {
+        let mut map = Map::from_ascii(&["#######", "#.....#", "#######"]).unwrap();
+        let mut monster = Monster::new(Cell::new(1, 1));
+        monster.heading = 0.0;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(1);
+        let report = monster.update(
+            &mut map,
+            Vec2::new(4.5, 1.5),
+            0.0,
+            0.1,
+            &GameConfig::default(),
+            &mut rng,
+        );
+        assert!(report.spotted);
+        assert_eq!(monster.state, AiState::Chasing);
     }
 }
