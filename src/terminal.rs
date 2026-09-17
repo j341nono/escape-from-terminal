@@ -40,15 +40,17 @@ pub struct TerminalSession {
 
 impl TerminalSession {
     pub fn enter() -> io::Result<Self> {
-        let keyboard_mode = if matches!(
-            crossterm::terminal::supports_keyboard_enhancement(),
-            Ok(true)
-        ) {
+        let input_debug = std::env::var("NULL_SECTOR_INPUT_DEBUG").ok();
+        let keyboard_mode = if input_debug.as_deref() == Some("force-enhanced")
+            || matches!(
+                crossterm::terminal::supports_keyboard_enhancement(),
+                Ok(true)
+            ) {
             KeyboardMode::Enhanced
         } else {
             KeyboardMode::Legacy
         };
-        if std::env::var_os("NULL_SECTOR_INPUT_DEBUG").is_some() {
+        if input_debug.is_some() {
             eprintln!("NULL SECTOR keyboard mode: {}", keyboard_mode.label());
         }
         enable_raw_mode()?;

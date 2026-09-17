@@ -47,6 +47,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut terminal = TerminalSession::enter()?;
     let mut previous_frame = Instant::now();
     let mut input = InputState::new(terminal.keyboard_mode(), previous_frame);
+    let input_debug = std::env::var_os("NULL_SECTOR_INPUT_DEBUG").is_some();
     let frame_budget = Duration::from_secs_f64(1.0 / TARGET_FPS as f64);
 
     while game.is_running() {
@@ -78,7 +79,10 @@ fn run() -> Result<(), Box<dyn Error>> {
             monster_distance,
         );
         audio.update(audio_state, monster_distance, game.take_spotted_event());
-        let frame = render_frame(&game, usize::from(width), usize::from(height));
+        let mut frame = render_frame(&game, usize::from(width), usize::from(height));
+        if input_debug {
+            frame.write_at(1, 2, &input.debug_line(frame_start));
+        }
         terminal.draw(&frame.to_terminal_string())?;
 
         if let Some(remaining) = frame_budget.checked_sub(frame_start.elapsed()) {

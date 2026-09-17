@@ -94,6 +94,18 @@ impl InputState {
         self.held = HeldKeys::default();
         self.legacy.clear(now);
     }
+
+    pub fn debug_line(&self, now: Instant) -> String {
+        let movement = self.movement(now);
+        format!(
+            "INPUT {}  FORWARD:{:+.0}  STRAFE:{:+.0}  TURN:{:+.0}  F:{}",
+            self.mode.label(),
+            movement.forward,
+            movement.strafe,
+            movement.turn,
+            if movement.look_back { "DOWN" } else { "UP" }
+        )
+    }
 }
 
 impl HeldKeys {
@@ -327,5 +339,17 @@ mod tests {
             input.handle_key(enter, now + COMMAND_DEBOUNCE),
             Command::Confirm
         );
+    }
+
+    #[test]
+    fn debug_line_reports_current_enhanced_state() {
+        let now = Instant::now();
+        let mut input = InputState::new(KeyboardMode::Enhanced, now);
+        input.handle_key(key(KeyCode::Char('w'), KeyEventKind::Press), now);
+        input.handle_key(key(KeyCode::Left, KeyEventKind::Press), now);
+        let line = input.debug_line(now);
+        assert!(line.contains("INPUT Enhanced"));
+        assert!(line.contains("FORWARD:+1"));
+        assert!(line.contains("TURN:-1"));
     }
 }

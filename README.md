@@ -117,7 +117,7 @@ If the terminal becomes smaller than 80x24, gameplay freezes and a resize messag
 
 Audio is generated in-process from simple waveforms; no external sound assets are required. Normal exploration uses a quiet electrical hum, a nearby creature adds a subtle pulse, and chase uses a faster industrial rhythm plus a one-shot alert. If the system audio device is unavailable, the game reports it before entering the alternate screen and continues silently.
 
-To print the detected keyboard mode before launch, run with `NULL_SECTOR_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback.
+To print the detected keyboard mode and show live input state, run with `NULL_SECTOR_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback. Maintainers can use `NULL_SECTOR_INPUT_DEBUG=force-enhanced` to exercise enhanced event parsing through a PTY that cannot answer capability queries.
 
 ## Development checks
 
