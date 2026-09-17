@@ -489,4 +489,22 @@ mod tests {
         assert!(render_frame(&game, 0, 0).to_terminal_string().is_empty());
         assert!(render_frame(&game, 0, 24).to_terminal_string().is_empty());
     }
+
+    #[test]
+    fn outcome_screens_show_required_actions_and_statistics() {
+        let mut game = Game::new(3);
+        game.state = GameState::Caught;
+        let caught = render_frame(&game, 80, 24).to_terminal_string();
+        assert!(caught.contains("YOU WERE FOUND"));
+        assert!(caught.contains("R  RETRY SAME FACILITY"));
+        assert!(caught.contains("N  NEW FACILITY"));
+
+        game.state = GameState::Escaped;
+        game.elapsed_seconds = 125.0;
+        game.chase_count = 2;
+        let escaped = render_frame(&game, 80, 24).to_terminal_string();
+        assert!(escaped.contains("YOU ESCAPED"));
+        assert!(escaped.contains("TIME: 02:05"));
+        assert!(escaped.contains("CHASES: 2"));
+    }
 }
