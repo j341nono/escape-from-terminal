@@ -1,4 +1,4 @@
-# NULL SECTOR
+# ESCAPE FROM TERMINAL
 
 An ASCII first-person survival horror game for the terminal.
 
@@ -27,8 +27,8 @@ The implementation uses portable terminal APIs and should also work on many Linu
 ## Build and run
 
 ```bash
-git clone <repository-url> null-sector
-cd null-sector
+git clone <repository-url> escape-from-terminal
+cd escape-from-terminal
 cargo run --release
 ```
 
@@ -78,7 +78,7 @@ The same seed reconstructs the same original facility, including door and spawn 
 
 ## Rendering
 
-NULL SECTOR uses grid-based DDA ray casting, with one ray per terminal column. Perpendicular distance correction prevents fisheye distortion. Wall height and the `█▓▒░` character ramp provide depth, while separate floor and ceiling patterns establish the horizon.
+ESCAPE FROM TERMINAL uses grid-based DDA ray casting, with one ray per terminal column. Perpendicular distance correction prevents fisheye distortion. Wall height and the `█▓▒░` character ramp provide depth, while separate floor and ceiling patterns establish the horizon.
 
 SPECIMEN-NULL is projected as a distance-scaled ASCII sprite. Each sprite column is compared with wall-ray depth, so walls and closed doors occlude it. Subtle edge corruption appears only when the creature is nearby.
 
@@ -117,7 +117,7 @@ If the terminal becomes smaller than 80x24, gameplay freezes and a resize messag
 
 Audio is generated in-process from simple waveforms; no external sound assets are required. Normal exploration uses a quiet electrical hum, a nearby creature adds a subtle pulse, and chase uses a faster industrial rhythm plus a one-shot alert. If the system audio device is unavailable, the game reports it before entering the alternate screen and continues silently.
 
-To print the detected keyboard mode and show live input state, run with `NULL_SECTOR_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback. Maintainers can use `NULL_SECTOR_INPUT_DEBUG=force-enhanced` to exercise enhanced event parsing through a PTY that cannot answer capability queries.
+To print the detected keyboard mode and show live input state, run with `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback. Maintainers can use `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=force-enhanced` to exercise enhanced event parsing through a PTY that cannot answer capability queries.
 
 ## Development checks
 

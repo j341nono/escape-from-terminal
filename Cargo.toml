@@ -1,5 +1,5 @@
 [package]
-name = "null-sector"
+name = "escape-from-terminal"
 version = "0.1.0"
 edition = "2024"
 description = "A terminal ray-cast survival horror game"

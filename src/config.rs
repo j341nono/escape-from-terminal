@@ -1,6 +1,6 @@
 use std::f32::consts::FRAC_PI_3;
 
-pub const GAME_NAME: &str = "NULL SECTOR";
+pub const GAME_NAME: &str = "ESCAPE FROM TERMINAL";
 pub const MIN_WIDTH: u16 = 80;
 pub const MIN_HEIGHT: u16 = 24;
 pub const MAX_RENDER_WIDTH: usize = 240;

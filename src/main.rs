@@ -47,7 +47,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut terminal = TerminalSession::enter()?;
     let mut previous_frame = Instant::now();
     let mut input = InputState::new(terminal.keyboard_mode(), previous_frame);
-    let input_debug = std::env::var_os("NULL_SECTOR_INPUT_DEBUG").is_some();
+    let input_debug = std::env::var_os("ESCAPE_FROM_TERMINAL_INPUT_DEBUG").is_some();
     let frame_budget = Duration::from_secs_f64(1.0 / TARGET_FPS as f64);
 
     while game.is_running() {
