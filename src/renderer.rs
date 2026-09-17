@@ -328,6 +328,9 @@ impl FrameBuffer {
     }
 
     pub fn to_terminal_string(&self) -> String {
+        if self.width == 0 || self.height == 0 {
+            return String::new();
+        }
         let mut output = String::with_capacity((self.width + 2) * self.height);
         for (row, cells) in self.cells.chunks(self.width).enumerate() {
             output.extend(cells);
@@ -478,5 +481,12 @@ mod tests {
                 .lines()
                 .all(|line| line.chars().count() == MAX_RENDER_WIDTH)
         );
+    }
+
+    #[test]
+    fn zero_sized_terminal_frame_is_safe() {
+        let game = Game::new(3);
+        assert!(render_frame(&game, 0, 0).to_terminal_string().is_empty());
+        assert!(render_frame(&game, 0, 24).to_terminal_string().is_empty());
     }
 }
