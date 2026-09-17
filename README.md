@@ -49,7 +49,7 @@ The current seed is shown on the pause screen.
 | `A` | Strafe left |
 | `D` | Strafe right |
 | `Left` / `Right` | Turn |
-| `F` | Look behind while held |
+| `F` | Look behind while held; toggle on legacy terminals |
 | `E` | Operate a door, power control, or exit |
 | `Esc` | Pause or resume |
 | `Enter` | Start, continue, or resume |
@@ -67,6 +67,8 @@ The current seed is shown on the pause screen.
 The HUD always shows the current objective. Trying the exit before restoring power displays a locked-exit message. Closed doors can be opened and closed with `E`; a closed door can buy time, but SPECIMEN-NULL will eventually open it.
 
 Movement has a constant speed and produces limited noise. Door and power interactions are louder. Escape through route choice: use corners to break line of sight, choose loops over dead ends, and close doors to buy time while SPECIMEN-NULL breaches them. Hold `F` while moving to look behind without changing your movement direction.
+
+On terminals supporting enhanced keyboard events, movement, turning, and look-back use true key press/repeat/release state. This allows combinations such as `W + Left`, `W + A + Left`, and `W + F + Left` without stopping movement. Legacy terminals retain per-key movement latches and use `F` as a toggle because they do not report reliable key-release events.
 
 ## Facility generation
 
@@ -114,6 +116,8 @@ The game enters raw mode, hides the cursor, and uses the alternate screen. A dro
 If the terminal becomes smaller than 80x24, gameplay freezes and a resize message is shown. It resumes safely after the terminal is enlarged. `Ctrl-C` is not a game command in raw mode; use `Q` to quit normally.
 
 Audio is generated in-process from simple waveforms; no external sound assets are required. Normal exploration uses a quiet electrical hum, a nearby creature adds a subtle pulse, and chase uses a faster industrial rhythm plus a one-shot alert. If the system audio device is unavailable, the game reports it before entering the alternate screen and continues silently.
+
+To print the detected keyboard mode before launch, run with `NULL_SECTOR_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback.
 
 ## Development checks
 
