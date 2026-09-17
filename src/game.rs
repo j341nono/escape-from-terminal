@@ -7,6 +7,7 @@ use crate::{
     player::Player,
 };
 use rand::{Rng, SeedableRng, rngs::StdRng};
+use std::f32::consts::{PI, TAU};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
@@ -32,6 +33,7 @@ pub struct Game {
     pub elapsed_seconds: f32,
     pub chase_count: u32,
     pub caught_flash: f32,
+    camera_look_back: bool,
     pub status_message: Option<&'static str>,
     pub status_timer: f32,
     interaction_noise: f32,
@@ -55,6 +57,7 @@ impl Game {
             elapsed_seconds: 0.0,
             chase_count: 0,
             caught_flash: 0.0,
+            camera_look_back: false,
             status_message: None,
             status_timer: 0.0,
             interaction_noise: 0.0,
@@ -85,6 +88,9 @@ impl Game {
             (GameState::Paused, Command::TogglePause | Command::Confirm) => GameState::Playing,
             (state, _) => state,
         };
+        if self.state != GameState::Playing {
+            self.camera_look_back = false;
+        }
         if command == Command::Interact && self.state == GameState::Playing {
             self.interact();
         }
@@ -103,6 +109,7 @@ impl Game {
         self.elapsed_seconds += delta_seconds;
         self.player
             .rotate(input.turn, self.config.rotation_speed, delta_seconds);
+        self.camera_look_back = input.look_back;
         let moving = input.forward != 0.0 || input.strafe != 0.0;
         let displacement =
             self.player.movement_direction(input) * (self.config.player_speed * delta_seconds);
@@ -224,6 +231,10 @@ impl Game {
         }
     }
 
+    pub fn camera_angle(&self) -> f32 {
+        (self.player.angle + if self.camera_look_back { PI } else { 0.0 }).rem_euclid(TAU)
+    }
+
     pub fn interaction_hint(&self) -> Option<&'static str> {
         let cell = crate::geom::Cell::new(
             self.player.position.x as usize,
@@ -286,6 +297,33 @@ mod tests {
         game.handle_command(Command::Confirm);
         game.update(input, 0.1);
         assert!(game.player.position.x > start.x);
+    }
+
+    #[test]
+    fn looking_back_keeps_body_movement_and_flips_camera_only() {
+        let mut game = Game::new(5);
+        game.map = Map::from_ascii(&["#####", "#...#", "#...#", "#...#", "#####"]).unwrap();
+        game.player = Player::new(crate::geom::Vec2::new(2.5, 2.5), 0.0);
+        game.state = GameState::Playing;
+        game.update(
+            MovementInput {
+                forward: 1.0,
+                look_back: true,
+                ..MovementInput::default()
+            },
+            0.1,
+        );
+        assert!(game.player.position.x > 2.5);
+        assert!((game.camera_angle() - PI).abs() < f32::EPSILON);
+
+        game.update(
+            MovementInput {
+                forward: 1.0,
+                ..MovementInput::default()
+            },
+            0.1,
+        );
+        assert!(game.camera_angle().abs() < f32::EPSILON);
     }
 
     #[test]

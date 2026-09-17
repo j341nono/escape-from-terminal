@@ -148,7 +148,7 @@ pub fn render_world(game: &Game, width: usize, height: usize) -> FrameBuffer {
     let rays = cast_view(
         &game.map,
         game.player.position,
-        game.player.angle,
+        game.camera_angle(),
         game.config.fov,
         width,
         game.config.render_distance,
@@ -183,7 +183,7 @@ fn render_marker(
     glyph: char,
 ) {
     let relative = position - game.player.position;
-    let raw_angle = relative.y.atan2(relative.x) - game.player.angle;
+    let raw_angle = relative.y.atan2(relative.x) - game.camera_angle();
     let angle = (raw_angle + PI).rem_euclid(2.0 * PI) - PI;
     if angle.abs() > game.config.fov * 0.52 {
         return;
@@ -219,7 +219,7 @@ fn apply_proximity_glitch(frame: &mut FrameBuffer, game: &Game) {
 
 fn render_monster(frame: &mut FrameBuffer, game: &Game, wall_depth: &[crate::raycaster::ViewRay]) {
     let relative = game.monster.position - game.player.position;
-    let raw_angle = relative.y.atan2(relative.x) - game.player.angle;
+    let raw_angle = relative.y.atan2(relative.x) - game.camera_angle();
     let angle = (raw_angle + PI).rem_euclid(2.0 * PI) - PI;
     if angle.abs() > game.config.fov * 0.57 {
         return;
