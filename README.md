@@ -20,14 +20,14 @@
 
 - 最新のstable Rust toolchain
 - 80列 x 24行以上のANSI互換ターミナル
-- 主な対象環境: macOS Terminal、iTerm2、Ghostty
+- 主な対象環境: macOS
 
 移植性のあるターミナルAPIを使っているため、多くのLinuxターミナルでも動作するはずです。現在の正式な対応プラットフォームはmacOSです。
 
 ## ビルドと起動
 
 ```bash
-git clone <repository-url> escape-from-terminal
+git clone git@github.com:j341nono/escape-from-terminal.git
 cd escape-from-terminal
 cargo run --release
 ```
