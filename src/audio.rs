@@ -84,7 +84,8 @@ impl AudioManager {
 
 impl AudioBackend {
     fn new() -> Result<Self, rodio::StreamError> {
-        let stream = OutputStreamBuilder::open_default_stream()?;
+        let mut stream = OutputStreamBuilder::open_default_stream()?;
+        stream.log_on_drop(false);
         let ambient = Sink::connect_new(stream.mixer());
         let nearby = Sink::connect_new(stream.mixer());
         let chase = Sink::connect_new(stream.mixer());
