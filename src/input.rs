@@ -24,6 +24,7 @@ pub struct InputState {
     right_until: Instant,
     turn_left_until: Instant,
     turn_right_until: Instant,
+    look_back_until: Instant,
     command_until: Instant,
 }
 
@@ -36,6 +37,7 @@ impl InputState {
             right_until: now,
             turn_left_until: now,
             turn_right_until: now,
+            look_back_until: now,
             command_until: now,
         }
     }
@@ -50,6 +52,7 @@ impl InputState {
             KeyCode::Char('d' | 'D') => self.right_until = deadline,
             KeyCode::Left => self.turn_left_until = deadline,
             KeyCode::Right => self.turn_right_until = deadline,
+            KeyCode::Char('f' | 'F') => self.look_back_until = deadline,
             _ => {}
         }
         if event.kind != KeyEventKind::Press || now < self.command_until {
@@ -75,6 +78,7 @@ impl InputState {
             forward: axis(self.forward_until, self.backward_until, now),
             strafe: axis(self.right_until, self.left_until, now),
             turn: axis(self.turn_right_until, self.turn_left_until, now),
+            look_back: self.look_back_until > now,
         }
     }
 
@@ -85,6 +89,7 @@ impl InputState {
         self.right_until = now;
         self.turn_left_until = now;
         self.turn_right_until = now;
+        self.look_back_until = now;
     }
 }
 
@@ -97,6 +102,7 @@ pub struct MovementInput {
     pub forward: f32,
     pub strafe: f32,
     pub turn: f32,
+    pub look_back: bool,
 }
 
 #[cfg(test)]
@@ -118,6 +124,32 @@ mod tests {
         let movement = input.movement(now);
         assert_eq!(movement.forward, 1.0);
         assert_eq!(movement.turn, -1.0);
+    }
+
+    #[test]
+    fn latches_movement_rotation_and_look_back_independently() {
+        let now = Instant::now();
+        let mut input = InputState::new(now);
+        for key in [
+            KeyCode::Char('w'),
+            KeyCode::Char('a'),
+            KeyCode::Left,
+            KeyCode::Char('f'),
+        ] {
+            input.handle_key(
+                KeyEvent::new(key, crossterm::event::KeyModifiers::NONE),
+                now,
+            );
+        }
+        assert_eq!(
+            input.movement(now),
+            MovementInput {
+                forward: 1.0,
+                strafe: -1.0,
+                turn: -1.0,
+                look_back: true,
+            }
+        );
     }
 
     #[test]
