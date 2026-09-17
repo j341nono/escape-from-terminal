@@ -8,3 +8,4 @@ license = "MIT"
 [dependencies]
 crossterm = "0.29"
 rand = "0.9"
+rodio = { version = "0.21", default-features = false, features = ["playback"] }

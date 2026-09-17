@@ -1,4 +1,5 @@
 mod args;
+mod audio;
 mod config;
 mod game;
 mod generator;
@@ -22,6 +23,7 @@ use crossterm::{event, terminal as crossterm_terminal};
 
 use crate::{
     args::seed_from_args,
+    audio::{AudioManager, AudioState},
     config::{MIN_HEIGHT, MIN_WIDTH, TARGET_FPS},
     game::Game,
     input::{Command, InputState},
@@ -41,6 +43,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         .map_err(io::Error::other)?
         .unwrap_or_else(rand::random);
     let mut game = Game::new(seed);
+    let mut audio = AudioManager::new();
     let mut terminal = TerminalSession::enter()?;
     let mut previous_frame = Instant::now();
     let mut input = InputState::new(previous_frame);
@@ -68,6 +71,9 @@ fn run() -> Result<(), Box<dyn Error>> {
         if width >= MIN_WIDTH && height >= MIN_HEIGHT {
             game.update(input.movement(frame_start), delta_seconds);
         }
+        let monster_distance = game.player.position.distance(game.monster.position);
+        let audio_state = AudioState::from_monster(game.monster.state, monster_distance);
+        audio.update(audio_state, monster_distance, game.take_spotted_event());
         let frame = render_frame(&game, usize::from(width), usize::from(height));
         terminal.draw(&frame.to_terminal_string())?;
 

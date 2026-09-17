@@ -33,6 +33,7 @@ pub struct Game {
     pub elapsed_seconds: f32,
     pub chase_count: u32,
     pub caught_flash: f32,
+    spotted_event: bool,
     camera_look_back: bool,
     pub status_message: Option<&'static str>,
     pub status_timer: f32,
@@ -57,6 +58,7 @@ impl Game {
             elapsed_seconds: 0.0,
             chase_count: 0,
             caught_flash: 0.0,
+            spotted_event: false,
             camera_look_back: false,
             status_message: None,
             status_timer: 0.0,
@@ -129,6 +131,7 @@ impl Game {
         if report.spotted {
             self.chase_count += 1;
             self.caught_flash = 0.9;
+            self.spotted_event = true;
         }
         self.caught_flash = (self.caught_flash - delta_seconds).max(0.0);
         self.status_timer = (self.status_timer - delta_seconds).max(0.0);
@@ -235,6 +238,10 @@ impl Game {
         (self.player.angle + if self.camera_look_back { PI } else { 0.0 }).rem_euclid(TAU)
     }
 
+    pub fn take_spotted_event(&mut self) -> bool {
+        std::mem::take(&mut self.spotted_event)
+    }
+
     pub fn interaction_hint(&self) -> Option<&'static str> {
         let cell = crate::geom::Cell::new(
             self.player.position.x as usize,
@@ -324,6 +331,21 @@ mod tests {
             0.1,
         );
         assert!(game.camera_angle().abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn spotted_event_is_emitted_once_when_chase_starts() {
+        let mut game = Game::new(17);
+        game.map = Map::from_ascii(&["#######", "#.....#", "#######"]).unwrap();
+        game.player = Player::new(crate::geom::Vec2::new(4.5, 1.5), 0.0);
+        game.monster = Monster::new(crate::geom::Cell::new(1, 1));
+        game.monster.heading = 0.0;
+        game.state = GameState::Playing;
+        game.update(MovementInput::default(), 0.1);
+        assert!(game.take_spotted_event());
+        assert!(!game.take_spotted_event());
+        game.update(MovementInput::default(), 0.1);
+        assert!(!game.take_spotted_event());
     }
 
     #[test]
