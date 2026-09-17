@@ -17,6 +17,14 @@ pub enum AudioState {
 }
 
 impl AudioState {
+    pub fn for_gameplay(is_playing: bool, monster_state: AiState, distance: f32) -> Self {
+        if is_playing {
+            Self::from_monster(monster_state, distance)
+        } else {
+            Self::Normal
+        }
+    }
+
     pub fn from_monster(monster_state: AiState, distance: f32) -> Self {
         if monster_state == AiState::Chasing {
             Self::Chase
@@ -159,6 +167,14 @@ mod tests {
         );
         assert_eq!(
             AudioState::from_monster(AiState::Searching, 10.0),
+            AudioState::Normal
+        );
+    }
+
+    #[test]
+    fn non_playing_screens_stop_chase_audio() {
+        assert_eq!(
+            AudioState::for_gameplay(false, AiState::Chasing, 1.0),
             AudioState::Normal
         );
     }

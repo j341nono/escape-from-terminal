@@ -25,7 +25,7 @@ use crate::{
     args::seed_from_args,
     audio::{AudioManager, AudioState},
     config::{MIN_HEIGHT, MIN_WIDTH, TARGET_FPS},
-    game::Game,
+    game::{Game, GameState},
     input::{Command, InputState},
     renderer::render_frame,
     terminal::TerminalSession,
@@ -72,7 +72,11 @@ fn run() -> Result<(), Box<dyn Error>> {
             game.update(input.movement(frame_start), delta_seconds);
         }
         let monster_distance = game.player.position.distance(game.monster.position);
-        let audio_state = AudioState::from_monster(game.monster.state, monster_distance);
+        let audio_state = AudioState::for_gameplay(
+            game.state == GameState::Playing,
+            game.monster.state,
+            monster_distance,
+        );
         audio.update(audio_state, monster_distance, game.take_spotted_event());
         let frame = render_frame(&game, usize::from(width), usize::from(height));
         terminal.draw(&frame.to_terminal_string())?;
