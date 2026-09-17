@@ -1,8 +1,8 @@
 # ESCAPE FROM TERMINAL
 
-An ASCII first-person survival horror game for the terminal.
+ターミナル上で動作する、ASCII一人称視点サバイバルホラーゲームです。
 
-No record of this underground research wing exists. Restore emergency power, find the emergency exit, and avoid **SPECIMEN-NULL**. There are no weapons and no way to kill it.
+地下研究区画の記録は、どこにも存在しません。非常電源を復旧させ、緊急出口を探し、**SPECIMEN-NULL** から逃げてください。武器はなく、怪物を倒す手段もありません。
 
 ```text
 .OBJECTIVE: RESTORE EMERGENCY POWER.............................................
@@ -16,15 +16,15 @@ No record of this underground research wing exists. Restore emergency power, fin
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ```
 
-## Requirements
+## 動作要件
 
-- A recent stable Rust toolchain
-- An ANSI-compatible terminal at least 80 columns by 24 rows
-- macOS Terminal, iTerm2, and Ghostty are the primary targets
+- 最新のstable Rust toolchain
+- 80列 x 24行以上のANSI互換ターミナル
+- 主な対象環境: macOS Terminal、iTerm2、Ghostty
 
-The implementation uses portable terminal APIs and should also work on many Linux terminals, but macOS is the currently supported platform.
+移植性のあるターミナルAPIを使っているため、多くのLinuxターミナルでも動作するはずです。現在の正式な対応プラットフォームはmacOSです。
 
-## Build and run
+## ビルドと起動
 
 ```bash
 git clone <repository-url> escape-from-terminal
@@ -32,94 +32,94 @@ cd escape-from-terminal
 cargo run --release
 ```
 
-To reproduce a facility, provide an unsigned 64-bit seed:
+同じ施設を再現するには、符号なし64ビットのseedを指定します。
 
 ```bash
 cargo run --release -- --seed 1337
 ```
 
-The current seed is shown on the pause screen.
+現在のseedはポーズ画面で確認できます。
 
-## Controls
+## 操作方法
 
-| Key | Action |
+| キー | 操作 |
 | --- | --- |
-| `W` / `Up` | Move forward |
-| `S` / `Down` | Move backward |
-| `A` | Strafe left |
-| `D` | Strafe right |
-| `Left` / `Right` | Turn |
-| `F` | Look behind while held; toggle on legacy terminals |
-| `E` | Operate a door, power control, or exit |
-| `Esc` | Pause or resume |
-| `Enter` | Start, continue, or resume |
-| `Q` | Quit |
-| `R` | Retry the same facility after capture or escape |
-| `N` | Generate a new facility after capture or escape |
+| `W` / `↑` | 前進 |
+| `S` / `↓` | 後退 |
+| `A` | 左へ移動 |
+| `D` | 右へ移動 |
+| `←` / `→` | 視点回転 |
+| `F` | 押している間、後方を見る（legacy terminalではトグル） |
+| `E` | ドア、電源制御、出口を操作 |
+| `Esc` | ポーズ / 再開 |
+| `Enter` | 開始、続行、再開 |
+| `Q` | 終了 |
+| `R` | 捕獲後または脱出後、同じ施設に再挑戦 |
+| `N` | 捕獲後または脱出後、新しい施設を生成 |
 
-## Objective
+## 目的
 
-1. Explore the facility and locate the `!` emergency-power beacon.
-2. Stand beside it and press `E` to restore power.
-3. Locate the `>` emergency-exit beacon.
-4. Stand beside it and press `E` to escape.
+1. 施設を探索し、`!` で示される非常電源ビーコンを見つけます。
+2. そのそばで `E` を押し、電源を復旧させます。
+3. `>` で示される緊急出口ビーコンを見つけます。
+4. そのそばで `E` を押して脱出します。
 
-The HUD always shows the current objective. Trying the exit before restoring power displays a locked-exit message. Closed doors can be opened and closed with `E`; a closed door can buy time, but SPECIMEN-NULL will eventually open it.
+HUDには常に現在の目的が表示されます。電源復旧前に出口を操作すると、出口がロックされていることを知らせるメッセージが表示されます。閉じたドアは `E` で開閉できます。ドアを閉めると少し時間を稼げますが、SPECIMEN-NULLはいずれドアを開けます。
 
-Movement has a constant speed and produces limited noise. Door and power interactions are louder. Escape through route choice: use corners to break line of sight, choose loops over dead ends, and close doors to buy time while SPECIMEN-NULL breaches them. Hold `F` while moving to look behind without changing your movement direction.
+移動速度は常に一定で、小さな物音を発生させます。ドアや電源の操作はより大きな音になります。見通しを切る角を使い、行き止まりよりループ状の通路を選び、ドアを閉めてSPECIMEN-NULLの侵入を遅らせることで逃げてください。移動中に `F` を押すと、進行方向を変えずに背後を確認できます。
 
-On terminals supporting enhanced keyboard events, movement, turning, and look-back use true key press/repeat/release state. This allows combinations such as `W + Left`, `W + A + Left`, and `W + F + Left` without stopping movement. Legacy terminals retain per-key movement latches and use `F` as a toggle because they do not report reliable key-release events.
+拡張キーボードイベント対応ターミナルでは、移動・回転・後方確認が実際の押下／リピート／解放状態で扱われます。そのため `W + ←`、`W + A + ←`、`W + F + ←` のような組み合わせでも移動は止まりません。legacy terminalではキーごとの移動ラッチを使い、信頼できるキー解放イベントがないため `F` はトグル操作になります。
 
-## Facility generation
+## 施設生成
 
-Each seed deterministically creates a research facility from rooms and orthogonal corridors. Extra room connections create loops that can be used to break pursuit. Generation selects separate start, power, exit, and monster-spawn cells, rejects short critical routes, and validates reachability before play begins.
+各seedは部屋と直交する廊下からなる研究施設を決定的に生成します。部屋同士を追加で接続して、追跡を振り切るために使えるループを作ります。生成時には開始地点・電源・出口・怪物の出現地点を別々に選び、短すぎる重要経路を除外したうえで、開始から目的、出口まで到達できることを検証します。
 
-The same seed reconstructs the same original facility, including door and spawn placement. Retrying resets all mutable run state; choosing a new facility creates a new seed.
+同じseedなら、ドアと怪物出現地点を含む同一の初期施設が再現されます。再挑戦では変更されるゲーム中の状態をすべてリセットし、新しい施設を選ぶと新しいseedを生成します。
 
-## Rendering
+## 描画
 
-ESCAPE FROM TERMINAL uses grid-based DDA ray casting, with one ray per terminal column. Perpendicular distance correction prevents fisheye distortion. Wall height and the `█▓▒░` character ramp provide depth, while separate floor and ceiling patterns establish the horizon.
+ESCAPE FROM TERMINALは、ターミナルの各列に1本ずつレイを飛ばすグリッドベースのDDAレイキャスティングを採用しています。垂直距離補正によって魚眼歪みを防ぎ、壁の高さと `█▓▒░` の文字ランプで奥行きを表現します。床と天井には個別のパターンを使い、地平線を表現します。
 
-SPECIMEN-NULL is projected as a distance-scaled ASCII sprite. Each sprite column is compared with wall-ray depth, so walls and closed doors occlude it. Subtle edge corruption appears only when the creature is nearby.
+SPECIMEN-NULLは距離に応じた大きさのASCIIスプライトとして投影されます。各スプライト列は壁レイの深度と比較するため、壁や閉じたドアの向こうには表示されません。怪物が近いときだけ、控えめな画面端の文字化けが発生します。
 
-The complete frame is assembled in memory and written in one terminal update. Unchanged frames are not written again.
+1フレーム全体をメモリ上で組み立て、まとめてターミナルへ書き込みます。前フレームと変化のないフレームは再描画しません。
 
-## Monster AI
+## 怪物AI
 
-SPECIMEN-NULL uses four states:
+SPECIMEN-NULLには4つの状態があります。
 
-- **Wandering** — chooses reachable destinations around the facility.
-- **Suspicious** — investigates nearby movement and interactions.
-- **Chasing** — follows a visible player using periodically refreshed BFS paths.
-- **Searching** — continues toward the last visible position before returning to wandering.
+- **Wandering** — 施設内の到達可能な目的地を選んで徘徊します。
+- **Suspicious** — 近くの移動音や操作音を調べます。
+- **Chasing** — 視認したプレイヤーを、定期的に更新するBFS経路で追跡します。
+- **Searching** — 最後に見た位置へ向かい、しばらく捜索した後に徘徊へ戻ります。
 
-Detection uses a vision cone, range checks, and wall/door line of sight. Hearing uses traversable path distance, so nearby walls and long detours attenuate quiet movement. The monster cannot walk through walls or closed doors and must spend time opening a blocking door.
+検知には視野角・視認距離・壁やドアによる遮蔽を使用します。聴覚は通行可能な経路距離を使うため、近くの壁や大きな迂回路は静かな足音を弱めます。怪物は壁や閉じたドアを通り抜けられず、進路上のドアを開けるには時間がかかります。
 
-## Architecture
+## アーキテクチャ
 
-The game is intentionally engine-free and divided by responsibility:
+ゲームエンジンは使わず、責務ごとにモジュールを分けています。
 
-- `game.rs` — state transitions, progression, camera state, and run statistics
-- `generator.rs` — deterministic facility generation and placement
-- `map.rs` — tiles, doors, and collision queries
-- `player.rs` / `input.rs` — movement and terminal-key state
-- `raycaster.rs` / `renderer.rs` — DDA visibility and ASCII projection
-- `monster.rs` / `pathfinding.rs` — perception, state machine, and BFS navigation
-- `terminal.rs` — raw mode, alternate screen, drawing, and cleanup
-- `audio.rs` — procedural ambience, proximity pulse, chase pulse, and alert events
-- `config.rs` — gameplay and rendering parameters
+- `game.rs` — 状態遷移、進行、カメラ状態、プレイ統計
+- `generator.rs` — 決定的な施設生成と配置
+- `map.rs` — タイル、ドア、衝突判定
+- `player.rs` / `input.rs` — 移動とターミナルのキー状態
+- `raycaster.rs` / `renderer.rs` — DDA可視判定とASCII投影
+- `monster.rs` / `pathfinding.rs` — 知覚、状態機械、BFSナビゲーション
+- `terminal.rs` — raw mode、alternate screen、描画、後始末
+- `audio.rs` — 手続き的な環境音、近接パルス、追跡パルス、警告イベント
+- `config.rs` — ゲームプレイと描画のパラメータ
 
-## Terminal notes
+## ターミナルに関する注意
 
-The game enters raw mode, hides the cursor, and uses the alternate screen. A drop guard restores raw mode, the cursor, and the original screen on normal exit, returned errors, and unwinding panics.
+ゲームはraw modeに入り、カーソルを隠してalternate screenを使用します。drop guardにより、通常終了・エラー返却・panicによるunwindのいずれでもraw mode、カーソル、元の画面を復元します。
 
-If the terminal becomes smaller than 80x24, gameplay freezes and a resize message is shown. It resumes safely after the terminal is enlarged. `Ctrl-C` is not a game command in raw mode; use `Q` to quit normally.
+ターミナルが80列 x 24行未満になるとゲームプレイを停止してリサイズ案内を表示します。必要な大きさに戻すと安全に再開します。raw mode中の `Ctrl-C` はゲームコマンドではありません。通常終了には `Q` を使ってください。
 
-Audio is generated in-process from simple waveforms; no external sound assets are required. Normal exploration uses a quiet electrical hum, a nearby creature adds a subtle pulse, and chase uses a faster industrial rhythm plus a one-shot alert. If the system audio device is unavailable, the game reports it before entering the alternate screen and continues silently.
+音声は簡単な波形をプロセス内で生成するため、外部音声アセットは必要ありません。通常探索では静かな電気的ハム音を再生し、怪物が近いと控えめなパルスを加え、追跡中は高速な工業的リズムと一度だけの警告音を再生します。システムのオーディオデバイスが使えない場合、alternate screenに入る前に通知して無音でゲームを継続します。
 
-To print the detected keyboard mode and show live input state, run with `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback. Maintainers can use `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=force-enhanced` to exercise enhanced event parsing through a PTY that cannot answer capability queries.
+検出されたキーボードモードと現在の入力状態を表示するには、`ESCAPE_FROM_TERMINAL_INPUT_DEBUG=1` を指定して起動します。`Enhanced` は実際のキー保持状態を使い、`Legacy` は互換用フォールバックを使います。メンテナーは `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=force-enhanced` を使うと、機能照会に応答しないPTY経由でも拡張イベント解析を確認できます。
 
-## Development checks
+## 開発時の確認
 
 ```bash
 cargo fmt --check
