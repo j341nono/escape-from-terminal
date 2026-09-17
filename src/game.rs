@@ -9,6 +9,9 @@ use crate::{
 use rand::{Rng, SeedableRng, rngs::StdRng};
 use std::f32::consts::{PI, TAU};
 
+const LOOK_BACK_TRANSITION_SECONDS: f32 = 0.16;
+const LOOK_BACK_SPEED: f32 = PI / LOOK_BACK_TRANSITION_SECONDS;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
     Title,
@@ -34,7 +37,7 @@ pub struct Game {
     pub chase_count: u32,
     pub caught_flash: f32,
     spotted_event: bool,
-    camera_look_back: bool,
+    camera_look_offset: f32,
     pub status_message: Option<&'static str>,
     pub status_timer: f32,
     interaction_noise: f32,
@@ -59,7 +62,7 @@ impl Game {
             chase_count: 0,
             caught_flash: 0.0,
             spotted_event: false,
-            camera_look_back: false,
+            camera_look_offset: 0.0,
             status_message: None,
             status_timer: 0.0,
             interaction_noise: 0.0,
@@ -90,9 +93,6 @@ impl Game {
             (GameState::Paused, Command::TogglePause | Command::Confirm) => GameState::Playing,
             (state, _) => state,
         };
-        if self.state != GameState::Playing {
-            self.camera_look_back = false;
-        }
         if command == Command::Interact && self.state == GameState::Playing {
             self.interact();
         }
@@ -111,7 +111,12 @@ impl Game {
         self.elapsed_seconds += delta_seconds;
         self.player
             .rotate(input.turn, self.config.rotation_speed, delta_seconds);
-        self.camera_look_back = input.look_back;
+        let target_look_offset = if input.look_back { PI } else { 0.0 };
+        self.camera_look_offset = move_towards(
+            self.camera_look_offset,
+            target_look_offset,
+            LOOK_BACK_SPEED * delta_seconds,
+        );
         let moving = input.forward != 0.0 || input.strafe != 0.0;
         let displacement =
             self.player.movement_direction(input) * (self.config.player_speed * delta_seconds);
@@ -235,7 +240,7 @@ impl Game {
     }
 
     pub fn camera_angle(&self) -> f32 {
-        (self.player.angle + if self.camera_look_back { PI } else { 0.0 }).rem_euclid(TAU)
+        (self.player.angle + self.camera_look_offset).rem_euclid(TAU)
     }
 
     pub fn take_spotted_event(&mut self) -> bool {
@@ -268,6 +273,15 @@ impl Game {
                 "[E] CLOSE DOOR"
             }
         })
+    }
+}
+
+fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
+    let difference = target - current;
+    if difference.abs() <= max_delta {
+        target
+    } else {
+        current + difference.signum() * max_delta
     }
 }
 
@@ -312,25 +326,49 @@ mod tests {
         game.map = Map::from_ascii(&["#####", "#...#", "#...#", "#...#", "#####"]).unwrap();
         game.player = Player::new(crate::geom::Vec2::new(2.5, 2.5), 0.0);
         game.state = GameState::Playing;
+        let look_back = MovementInput {
+            forward: 1.0,
+            look_back: true,
+            ..MovementInput::default()
+        };
+        game.update(look_back, 0.04);
+        assert!(game.player.position.x > 2.5);
+        assert!(game.camera_look_offset > 0.0 && game.camera_look_offset < PI);
+        for _ in 0..3 {
+            game.update(look_back, 0.04);
+        }
+        assert!((game.camera_look_offset - PI).abs() < 0.0001);
+        assert!((game.camera_angle() - PI).abs() < 0.0001);
+
+        for _ in 0..4 {
+            game.update(MovementInput::default(), 0.04);
+        }
+        assert!(game.camera_look_offset.abs() < 0.0001);
+        assert!(game.camera_angle().abs() < 0.0001);
+    }
+
+    #[test]
+    fn look_back_camera_tracks_body_rotation() {
+        let mut game = Game::new(8);
+        game.state = GameState::Playing;
+        game.camera_look_offset = PI;
         game.update(
             MovementInput {
                 forward: 1.0,
+                turn: -1.0,
                 look_back: true,
                 ..MovementInput::default()
             },
-            0.1,
+            0.05,
         );
-        assert!(game.player.position.x > 2.5);
-        assert!((game.camera_angle() - PI).abs() < f32::EPSILON);
+        let camera_relative_to_body = (game.camera_angle() - game.player.angle).rem_euclid(TAU);
+        assert!((camera_relative_to_body - PI).abs() < 0.0001);
+    }
 
-        game.update(
-            MovementInput {
-                forward: 1.0,
-                ..MovementInput::default()
-            },
-            0.1,
-        );
-        assert!(game.camera_angle().abs() < f32::EPSILON);
+    #[test]
+    fn camera_offset_transition_does_not_overshoot() {
+        assert_eq!(move_towards(0.0, PI, PI * 2.0), PI);
+        assert_eq!(move_towards(PI, 0.0, PI * 2.0), 0.0);
     }
 
     #[test]

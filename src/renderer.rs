@@ -456,7 +456,14 @@ mod tests {
                 look_back: true,
                 ..crate::input::MovementInput::default()
             },
-            0.0,
+            0.1,
+        );
+        game.update(
+            crate::input::MovementInput {
+                look_back: true,
+                ..crate::input::MovementInput::default()
+            },
+            0.1,
         );
         assert!(
             render_world(&game, 80, 24)
