@@ -46,7 +46,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut audio = AudioManager::new();
     let mut terminal = TerminalSession::enter()?;
     let mut previous_frame = Instant::now();
-    let mut input = InputState::new(previous_frame);
+    let mut input = InputState::new(terminal.keyboard_mode(), previous_frame);
     let frame_budget = Duration::from_secs_f64(1.0 / TARGET_FPS as f64);
 
     while game.is_running() {
