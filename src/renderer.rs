@@ -443,6 +443,29 @@ mod tests {
     }
 
     #[test]
+    fn look_back_camera_reveals_monster_behind_body() {
+        let mut game = Game::new(3);
+        game.map =
+            crate::map::Map::from_ascii(&["#######", "#.....#", "#.....#", "#######"]).unwrap();
+        game.player.position = crate::geom::Vec2::new(3.5, 1.5);
+        game.player.angle = 0.0;
+        game.monster.position = crate::geom::Vec2::new(1.5, 1.5);
+        game.state = GameState::Playing;
+        game.update(
+            crate::input::MovementInput {
+                look_back: true,
+                ..crate::input::MovementInput::default()
+            },
+            0.0,
+        );
+        assert!(
+            render_world(&game, 80, 24)
+                .to_terminal_string()
+                .contains('@')
+        );
+    }
+
+    #[test]
     fn very_close_monster_and_fov_edge_are_bounds_safe() {
         let mut game = Game::new(3);
         game.map =
