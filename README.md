@@ -5,7 +5,6 @@ An ASCII first-person survival horror game for the terminal.
 No record of this underground research wing exists. Restore emergency power, find the emergency exit, and avoid **SPECIMEN-NULL**. There are no weapons and no way to kill it.
 
 ```text
-.STAMINA [#########-----].......................................................
 .OBJECTIVE: RESTORE EMERGENCY POWER.............................................
 ................................................................................
                          ░░░░░░░░░░░░░░░░░░░░░░
@@ -50,7 +49,7 @@ The current seed is shown on the pause screen.
 | `A` | Strafe left |
 | `D` | Strafe right |
 | `Left` / `Right` | Turn |
-| `Space` | Sprint while moving |
+| `F` | Look behind while held |
 | `E` | Operate a door, power control, or exit |
 | `Esc` | Pause or resume |
 | `Enter` | Start, continue, or resume |
@@ -67,7 +66,7 @@ The current seed is shown on the pause screen.
 
 The HUD always shows the current objective. Trying the exit before restoring power displays a locked-exit message. Closed doors can be opened and closed with `E`; a closed door can buy time, but SPECIMEN-NULL will eventually open it.
 
-Walking produces limited noise. Sprinting is faster and can create distance during a chase, but it is louder and consumes stamina. When stamina is exhausted, it must partially recover before sprinting becomes available again.
+Movement has a constant speed and produces limited noise. Door and power interactions are louder. Escape through route choice: use corners to break line of sight, choose loops over dead ends, and close doors to buy time while SPECIMEN-NULL breaches them. Hold `F` while moving to look behind without changing your movement direction.
 
 ## Facility generation
 
@@ -88,7 +87,7 @@ The complete frame is assembled in memory and written in one terminal update. Un
 SPECIMEN-NULL uses four states:
 
 - **Wandering** — chooses reachable destinations around the facility.
-- **Suspicious** — investigates nearby footsteps, sprinting, and interactions.
+- **Suspicious** — investigates nearby movement and interactions.
 - **Chasing** — follows a visible player using periodically refreshed BFS paths.
 - **Searching** — continues toward the last visible position before returning to wandering.
 
@@ -98,13 +97,14 @@ Detection uses a vision cone, range checks, and wall/door line of sight. Hearing
 
 The game is intentionally engine-free and divided by responsibility:
 
-- `game.rs` — state transitions, progression, stamina, and run statistics
+- `game.rs` — state transitions, progression, camera state, and run statistics
 - `generator.rs` — deterministic facility generation and placement
 - `map.rs` — tiles, doors, and collision queries
 - `player.rs` / `input.rs` — movement and terminal-key state
 - `raycaster.rs` / `renderer.rs` — DDA visibility and ASCII projection
 - `monster.rs` / `pathfinding.rs` — perception, state machine, and BFS navigation
 - `terminal.rs` — raw mode, alternate screen, drawing, and cleanup
+- `audio.rs` — procedural ambience, proximity pulse, chase pulse, and alert events
 - `config.rs` — gameplay and rendering parameters
 
 ## Terminal notes
@@ -112,6 +112,8 @@ The game is intentionally engine-free and divided by responsibility:
 The game enters raw mode, hides the cursor, and uses the alternate screen. A drop guard restores raw mode, the cursor, and the original screen on normal exit, returned errors, and unwinding panics.
 
 If the terminal becomes smaller than 80x24, gameplay freezes and a resize message is shown. It resumes safely after the terminal is enlarged. `Ctrl-C` is not a game command in raw mode; use `Q` to quit normally.
+
+Audio is generated in-process from simple waveforms; no external sound assets are required. Normal exploration uses a quiet electrical hum, a nearby creature adds a subtle pulse, and chase uses a faster industrial rhythm plus a one-shot alert. If the system audio device is unavailable, the game reports it before entering the alternate screen and continues silently.
 
 ## Development checks
 
