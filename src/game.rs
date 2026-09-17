@@ -334,6 +334,22 @@ mod tests {
     }
 
     #[test]
+    fn movement_uses_one_constant_speed() {
+        let mut game = Game::new(6);
+        game.map = Map::from_ascii(&["#####", "#...#", "#...#", "#...#", "#####"]).unwrap();
+        game.player = Player::new(crate::geom::Vec2::new(2.5, 2.5), 0.0);
+        game.state = GameState::Playing;
+        game.update(
+            MovementInput {
+                forward: 1.0,
+                ..MovementInput::default()
+            },
+            0.1,
+        );
+        assert!((game.player.position.x - 2.5 - game.config.player_speed * 0.1).abs() < 0.0001);
+    }
+
+    #[test]
     fn spotted_event_is_emitted_once_when_chase_starts() {
         let mut game = Game::new(17);
         game.map = Map::from_ascii(&["#######", "#.....#", "#######"]).unwrap();

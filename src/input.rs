@@ -153,6 +153,36 @@ mod tests {
     }
 
     #[test]
+    fn movement_and_turn_latches_overlap_for_each_direction() {
+        let now = Instant::now();
+        for (move_key, turn_key, forward, strafe, turn) in [
+            (KeyCode::Char('w'), KeyCode::Left, 1.0, 0.0, -1.0),
+            (KeyCode::Char('w'), KeyCode::Right, 1.0, 0.0, 1.0),
+            (KeyCode::Char('s'), KeyCode::Left, -1.0, 0.0, -1.0),
+            (KeyCode::Char('s'), KeyCode::Right, -1.0, 0.0, 1.0),
+            (KeyCode::Char('a'), KeyCode::Left, 0.0, -1.0, -1.0),
+            (KeyCode::Char('d'), KeyCode::Right, 0.0, 1.0, 1.0),
+        ] {
+            let mut input = InputState::new(now);
+            for key in [move_key, turn_key] {
+                input.handle_key(
+                    KeyEvent::new(key, crossterm::event::KeyModifiers::NONE),
+                    now,
+                );
+            }
+            assert_eq!(
+                input.movement(now),
+                MovementInput {
+                    forward,
+                    strafe,
+                    turn,
+                    look_back: false,
+                }
+            );
+        }
+    }
+
+    #[test]
     fn opposite_keys_cancel_each_other() {
         let now = Instant::now();
         let mut input = InputState::new(now);
