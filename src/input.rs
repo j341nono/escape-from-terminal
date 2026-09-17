@@ -265,6 +265,8 @@ mod tests {
             (KeyCode::Char('s'), KeyCode::Left, -1.0, 0.0, -1.0),
             (KeyCode::Char('s'), KeyCode::Right, -1.0, 0.0, 1.0),
             (KeyCode::Char('a'), KeyCode::Left, 0.0, -1.0, -1.0),
+            (KeyCode::Char('a'), KeyCode::Right, 0.0, -1.0, 1.0),
+            (KeyCode::Char('d'), KeyCode::Left, 0.0, 1.0, -1.0),
             (KeyCode::Char('d'), KeyCode::Right, 0.0, 1.0, 1.0),
         ] {
             let mut input = InputState::new(KeyboardMode::Enhanced, now);
@@ -275,6 +277,29 @@ mod tests {
                 input.movement(now),
                 MovementInput {
                     forward,
+                    strafe,
+                    turn,
+                    look_back: false,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn enhanced_diagonal_movement_combines_with_turning() {
+        let now = Instant::now();
+        for (strafe_key, turn_key, strafe, turn) in [
+            (KeyCode::Char('a'), KeyCode::Left, -1.0, -1.0),
+            (KeyCode::Char('d'), KeyCode::Right, 1.0, 1.0),
+        ] {
+            let mut input = InputState::new(KeyboardMode::Enhanced, now);
+            for key in [KeyCode::Char('w'), strafe_key, turn_key] {
+                input.handle_key(KeyEvent::new(key, KeyModifiers::NONE), now);
+            }
+            assert_eq!(
+                input.movement(now),
+                MovementInput {
+                    forward: 1.0,
                     strafe,
                     turn,
                     look_back: false,
