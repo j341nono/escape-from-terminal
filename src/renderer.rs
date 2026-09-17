@@ -27,7 +27,7 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
             frame.write_at(
                 1,
                 height.saturating_sub(1),
-                "WASD MOVE  SPACE RUN  ←/→ TURN  E USE  ESC PAUSE  Q QUIT",
+                "WASD MOVE  ←/→ TURN  F LOOK BACK  E USE  ESC PAUSE  Q QUIT",
             );
             frame
         }
@@ -47,10 +47,7 @@ pub fn render_frame(game: &Game, width: usize, height: usize) -> FrameBuffer {
 }
 
 fn render_hud(frame: &mut FrameBuffer, game: &Game) {
-    let filled = ((game.stamina / game.config.stamina_seconds) * 14.0).round() as usize;
-    let bar = format!("{}{}", "#".repeat(filled), "-".repeat(14 - filled));
-    frame.write_at(1, 0, &format!("STAMINA [{bar}]"));
-    frame.write_at(1, 1, &format!("OBJECTIVE: {}", game.objective_text()));
+    frame.write_at(1, 0, &format!("OBJECTIVE: {}", game.objective_text()));
     if let Some(message) = game.status_message.or_else(|| game.interaction_hint()) {
         frame.write_centered(3, message);
     }

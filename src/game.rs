@@ -28,8 +28,6 @@ pub struct Game {
     pub objective_cell: crate::geom::Cell,
     pub exit_cell: crate::geom::Cell,
     pub monster: Monster,
-    pub stamina: f32,
-    pub sprint_exhausted: bool,
     pub power_restored: bool,
     pub elapsed_seconds: f32,
     pub chase_count: u32,
@@ -44,7 +42,6 @@ impl Game {
     pub fn new(seed: u64) -> Self {
         let facility = generate(seed);
         let config = GameConfig::default();
-        let stamina = config.stamina_seconds;
         Self {
             state: GameState::Title,
             player: Player::new(facility.start.center(), 0.0),
@@ -54,8 +51,6 @@ impl Game {
             objective_cell: facility.objective,
             exit_cell: facility.exit,
             monster: Monster::new(facility.monster_spawn),
-            stamina,
-            sprint_exhausted: false,
             power_restored: false,
             elapsed_seconds: 0.0,
             chase_count: 0,
@@ -109,34 +104,11 @@ impl Game {
         self.player
             .rotate(input.turn, self.config.rotation_speed, delta_seconds);
         let moving = input.forward != 0.0 || input.strafe != 0.0;
-        if self.sprint_exhausted && self.stamina >= self.config.stamina_resume {
-            self.sprint_exhausted = false;
-        }
-        let sprinting = input.sprint && moving && !self.sprint_exhausted;
-        if sprinting {
-            self.stamina = (self.stamina - delta_seconds).max(0.0);
-            if self.stamina == 0.0 {
-                self.sprint_exhausted = true;
-            }
-        } else {
-            self.stamina = (self.stamina + self.config.stamina_recovery * delta_seconds)
-                .min(self.config.stamina_seconds);
-        }
-        let displacement = self.player.movement_direction(input)
-            * ((if sprinting {
-                self.config.sprint_speed
-            } else {
-                self.config.walk_speed
-            }) * delta_seconds);
+        let displacement =
+            self.player.movement_direction(input) * (self.config.player_speed * delta_seconds);
         self.player
             .move_with_collision(&self.map, displacement, self.config.player_radius);
-        let movement_noise: f32 = if sprinting {
-            1.0
-        } else if moving {
-            0.42
-        } else {
-            0.0
-        };
+        let movement_noise: f32 = if moving { 0.42 } else { 0.0 };
         let noise = movement_noise.max(self.interaction_noise);
         self.interaction_noise = 0.0;
         let report = self.monster.update(
@@ -343,22 +315,6 @@ mod tests {
     }
 
     #[test]
-    fn sprinting_consumes_and_resting_recovers_stamina() {
-        let mut game = Game::new(11);
-        game.state = GameState::Playing;
-        let sprint = MovementInput {
-            forward: 1.0,
-            sprint: true,
-            ..MovementInput::default()
-        };
-        game.update(sprint, 0.1);
-        let spent = game.stamina;
-        assert!(spent < game.config.stamina_seconds);
-        game.update(MovementInput::default(), 0.1);
-        assert!(game.stamina > spent);
-    }
-
-    #[test]
     fn capture_enters_retryable_state() {
         let mut game = Game::new(19);
         game.state = GameState::Playing;
@@ -368,10 +324,8 @@ mod tests {
         game.handle_command(Command::Retry);
         assert_eq!(game.state, GameState::Playing);
         assert_eq!(game.seed, 19);
-        assert_eq!(game.stamina, game.config.stamina_seconds);
         assert!(!game.power_restored);
         assert_eq!(game.chase_count, 0);
-        assert!(!game.sprint_exhausted);
     }
 
     #[test]
@@ -388,37 +342,18 @@ mod tests {
     }
 
     #[test]
-    fn exhausted_sprint_requires_partial_recovery() {
-        let mut game = Game::new(29);
-        game.state = GameState::Playing;
-        game.stamina = 0.01;
-        let sprint = MovementInput {
-            forward: 1.0,
-            sprint: true,
-            ..MovementInput::default()
-        };
-        game.update(sprint, 0.1);
-        assert!(game.sprint_exhausted);
-        game.update(sprint, 0.1);
-        assert!(game.stamina > 0.0);
-        assert!(game.sprint_exhausted);
-    }
-
-    #[test]
     fn retry_reconstructs_same_facility_without_stale_state() {
         let mut game = Game::new(31);
         let original_map = game.map.clone();
         let original_spawn = game.monster.position;
         game.state = GameState::Caught;
         game.power_restored = true;
-        game.stamina = 0.0;
         game.chase_count = 5;
         game.monster.path.push(game.exit_cell);
         game.handle_command(Command::Retry);
         assert_eq!(game.map, original_map);
         assert_eq!(game.monster.position, original_spawn);
         assert!(game.monster.path.is_empty());
-        assert_eq!(game.stamina, game.config.stamina_seconds);
         assert_eq!(game.chase_count, 0);
         assert!(!game.power_restored);
     }

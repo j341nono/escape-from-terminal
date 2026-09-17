@@ -59,7 +59,6 @@ mod tests {
             forward: 1.0,
             strafe: 1.0,
             turn: 0.0,
-            sprint: false,
         });
         assert!((direction.length() - 1.0).abs() < 0.0001);
     }
