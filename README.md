@@ -124,12 +124,3 @@ Audio is generated in-process from simple waveforms; no external sound assets ar
 
 To print the detected keyboard mode and show live input state, run with `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=1`. `Enhanced` uses real held-key state; `Legacy` uses the compatibility fallback. Maintainers can use `ESCAPE_FROM_TERMINAL_INPUT_DEBUG=force-enhanced` to exercise enhanced event parsing through a PTY that cannot answer capability queries.
 
-## Development checks
-
-```bash
-cargo fmt --check
-cargo check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
-cargo build --release
-```
